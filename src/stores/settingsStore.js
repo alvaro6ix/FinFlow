@@ -1,73 +1,22 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const useSettingsStore = create(
+export const useSettingsStore = create(
   persist(
     (set) => ({
-      // Preferencias de usuario
       currency: 'MXN',
       language: 'es',
-      dateFormat: 'DD/MM/YYYY',
-      theme: 'light',
+      darkMode: 'auto',
+      fiscalMonthStart: 1, // Día que inicia el mes financiero
       
-      // Notificaciones
-      notifications: {
-        enabled: true,
-        dailyReminder: true,
-        dailyReminderTime: '20:00',
-        budgetAlerts: true,
-        budgetThreshold: 80,
-        recurringReminders: true,
-        goalAlerts: true,
-      },
-
-      // Categorías personalizadas
-      customCategories: [],
-
-      // Onboarding
-      hasCompletedOnboarding: false,
-      hasSeenTour: false,
-
-      // Configuración de presupuestos
-      budgetMethod: 'manual',
-
-      // Acciones
       setCurrency: (currency) => set({ currency }),
+      setDarkMode: (mode) => {
+        set({ darkMode: mode });
+        if (mode === 'dark') document.documentElement.classList.add('dark');
+        else if (mode === 'light') document.documentElement.classList.remove('dark');
+      },
       setLanguage: (language) => set({ language }),
-      setDateFormat: (dateFormat) => set({ dateFormat }),
-      setTheme: (theme) => set({ theme }),
-      
-      updateNotificationSettings: (settings) =>
-        set((state) => ({
-          notifications: { ...state.notifications, ...settings },
-        })),
-
-      addCustomCategory: (category) =>
-        set((state) => ({
-          customCategories: [...state.customCategories, category],
-        })),
-
-      updateCustomCategory: (id, updates) =>
-        set((state) => ({
-          customCategories: state.customCategories.map((cat) =>
-            cat.id === id ? { ...cat, ...updates } : cat
-          ),
-        })),
-
-      deleteCustomCategory: (id) =>
-        set((state) => ({
-          customCategories: state.customCategories.filter((cat) => cat.id !== id),
-        })),
-
-      completeOnboarding: () => set({ hasCompletedOnboarding: true }),
-      completeTour: () => set({ hasSeenTour: true }),
-      
-      setBudgetMethod: (method) => set({ budgetMethod: method }),
     }),
-    {
-      name: 'settings-storage',
-    }
+    { name: 'finflow-settings' }
   )
 );
-
-export { useSettingsStore };

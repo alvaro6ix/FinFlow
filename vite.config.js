@@ -10,29 +10,14 @@ export default defineConfig({
       manifest: {
         name: 'FinFlow',
         short_name: 'FinFlow',
-        description: 'Tu asistente financiero personal',
         theme_color: '#f59e0b',
-        icons: [
-          {
-            src: '/logo192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/logo512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+        icons: []
       }
     })
   ],
-  server: {
-    port: 5173,
-    open: true,
-  },
   build: {
     outDir: 'dist',
-    sourcemap: false,
-  },
+    assetsDir: 'assets',
+    emptyOutDir: true
+  }
 })

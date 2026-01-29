@@ -2,102 +2,62 @@ import React from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAuthStore } from '../stores/authStore';
 import Card from '../components/common/Card';
-import Button from '../components/common/Button';
 
 const Settings = () => {
-  const { currency, theme, setCurrency, setTheme } = useSettingsStore();
-  const { user, signOut } = useAuthStore();
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const { currency, setCurrency, darkMode, setDarkMode } = useSettingsStore();
+  const { deleteAccount, user } = useAuthStore();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-secondary-900 dark:text-white">
-          Configuración
-        </h1>
-        <p className="text-secondary-600 dark:text-secondary-400 mt-1">
-          Personaliza tu experiencia
-        </p>
-      </div>
+    <div className="space-y-6 pb-24">
+      <h1 className="text-2xl font-bold dark:text-white">Configuración</h1>
 
-      {/* Profile */}
-      <Card title="Perfil">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary-500 flex items-center justify-center text-white text-2xl font-bold">
-              {user?.displayName?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <div>
-              <h3 className="font-bold text-secondary-900 dark:text-white">
-                {user?.displayName || 'Usuario'}
-              </h3>
-              <p className="text-sm text-secondary-600 dark:text-secondary-400">
-                {user?.email}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Currency */}
-      <Card title="Moneda">
-        <div className="space-y-2">
-          {['MXN', 'USD', 'EUR'].map((curr) => (
-            <label key={curr} className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary-50 dark:hover:bg-secondary-800 cursor-pointer">
-              <input
-                type="radio"
-                name="currency"
-                value={curr}
-                checked={currency === curr}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-4 h-4 text-primary-600"
-              />
-              <span className="text-secondary-900 dark:text-white">
-                {curr === 'MXN' && '🇲🇽 Peso Mexicano (MXN)'}
-                {curr === 'USD' && '🇺🇸 Dólar Estadounidense (USD)'}
-                {curr === 'EUR' && '🇪🇺 Euro (EUR)'}
-              </span>
-            </label>
-          ))}
-        </div>
-      </Card>
-
-      {/* Theme */}
       <Card title="Apariencia">
-        <div className="space-y-2">
-          {[
-            { value: 'light', label: '☀️ Modo Claro', icon: '☀️' },
-            { value: 'dark', label: '🌙 Modo Oscuro', icon: '🌙' },
-            { value: 'auto', label: '🔄 Automático', icon: '🔄' },
-          ].map((option) => (
-            <label key={option.value} className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary-50 dark:hover:bg-secondary-800 cursor-pointer">
-              <input
-                type="radio"
-                name="theme"
-                value={option.value}
-                checked={theme === option.value}
-                onChange={(e) => setTheme(e.target.value)}
-                className="w-4 h-4 text-primary-600"
-              />
-              <span className="text-secondary-900 dark:text-white">
-                {option.label}
-              </span>
-            </label>
-          ))}
+        <div className="flex justify-between items-center">
+          <span>Modo Oscuro</span>
+          <select 
+            value={darkMode} 
+            onChange={(e) => setDarkMode(e.target.value)}
+            className="bg-secondary-50 p-2 rounded-lg border-none"
+          >
+            <option value="light">Claro</option>
+            <option value="dark">Oscuro</option>
+            <option value="auto">Automático</option>
+          </select>
         </div>
       </Card>
 
-      {/* Danger Zone */}
-      <Card title="Zona de Peligro">
-        <div className="space-y-3">
-          <Button variant="danger" fullWidth onClick={handleSignOut}>
-            Cerrar Sesión
-          </Button>
+      <Card title="Preferencias de Moneda">
+        <div className="flex justify-between items-center">
+          <span>Moneda Principal</span>
+          <select 
+            value={currency} 
+            onChange={(e) => setCurrency(e.target.value)}
+            className="bg-secondary-50 p-2 rounded-lg border-none"
+          >
+            <option value="MXN">MXN - Peso Mexicano</option>
+            <option value="USD">USD - Dólar</option>
+            <option value="EUR">EUR - Euro</option>
+          </select>
         </div>
       </Card>
+
+      <Card title="Privacidad y Cuenta">
+        <div className="space-y-4">
+          <button className="w-full text-left text-primary-600 font-medium">Exportar mis datos (JSON)</button>
+          <hr className="border-secondary-100" />
+          <button 
+            onClick={() => { if(confirm('¿Seguro? Esta acción es irreversible')) deleteAccount() }}
+            className="w-full text-left text-danger-600 font-medium"
+          >
+            Eliminar mi cuenta permanentemente
+          </button>
+        </div>
+      </Card>
+      
+      <div className="text-center text-secondary-400 text-xs">
+        <p>FinFlow v1.0.0</p>
+        <p>ID Usuario: {user?.uid}</p>
+      </div>
     </div>
   );
 };

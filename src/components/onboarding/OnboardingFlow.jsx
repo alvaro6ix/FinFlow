@@ -1,76 +1,38 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSettingsStore } from '../../stores/settingsStore';
-import WelcomeScreen from './WelcomeScreen';
-import TourStep from './TourStep';
 
-const OnboardingFlow = () => {
+const steps = [
+  { title: "¡Bienvenido a FinFlow!", desc: "Tu asistente financiero personal para tomar el control total de tu dinero.", icon: "💰" },
+  { title: "Registro Rápido", desc: "Registra cualquier gasto en menos de 3 segundos usando el botón flotante (+).", icon: "⚡" },
+  { title: "Metas Claras", desc: "Define objetivos de ahorro y visualiza tu progreso en tiempo real.", icon: "🎯" },
+  { title: "Inteligencia Emocional", desc: "Analiza cómo tus emociones influyen en tus gastos impulsivos.", icon: "🧠" }
+];
+
+const OnboardingFlow = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const navigate = useNavigate();
-  const { completeOnboarding } = useSettingsStore();
 
-  const steps = [
-    {
-      icon: '💰',
-      title: 'Registra gastos rápidamente',
-      description: 'Usa el botón flotante para agregar gastos en menos de 3 segundos.',
-    },
-    {
-      icon: '🎯',
-      title: 'Crea presupuestos',
-      description: 'Define presupuestos por categoría y recibe alertas cuando te acerques al límite.',
-    },
-    {
-      icon: '📊',
-      title: 'Visualiza tus gastos',
-      description: 'Analiza tus patrones de gasto con gráficas y reportes detallados.',
-    },
-    {
-      icon: '🏆',
-      title: 'Define metas financieras',
-      description: 'Establece objetivos de ahorro y haz seguimiento de tu progreso.',
-    },
-  ];
-
-  const handleNext = () => {
-    if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleFinish();
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSkip = () => {
-    handleFinish();
-  };
-
-  const handleFinish = () => {
-    completeOnboarding();
-    navigate('/dashboard');
+  const next = () => {
+    if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
+    else onComplete();
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 dark:from-secondary-950 dark:via-secondary-900 dark:to-secondary-950 p-4">
-      {currentStep === 0 ? (
-        <WelcomeScreen onNext={handleNext} onSkip={handleSkip} />
-      ) : (
-        <TourStep
-          step={currentStep}
-          totalSteps={steps.length}
-          icon={steps[currentStep - 1].icon}
-          title={steps[currentStep - 1].title}
-          description={steps[currentStep - 1].description}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          onSkip={handleSkip}
-        />
-      )}
+    <div className="fixed inset-0 z-[100] bg-white dark:bg-secondary-950 flex flex-col items-center justify-center p-8">
+      <div className="text-8xl mb-8 animate-bounce">{steps[currentStep].icon}</div>
+      <h2 className="text-3xl font-bold text-center mb-4 dark:text-white">{steps[currentStep].title}</h2>
+      <p className="text-secondary-500 text-center max-w-sm mb-12">{steps[currentStep].desc}</p>
+      
+      <div className="flex gap-2 mb-8">
+        {steps.map((_, i) => (
+          <div key={i} className={`h-2 w-8 rounded-full ${i === currentStep ? 'bg-primary-500' : 'bg-secondary-200'}`} />
+        ))}
+      </div>
+
+      <button 
+        onClick={next}
+        className="w-full max-w-xs py-4 bg-primary-500 text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-transform"
+      >
+        {currentStep === steps.length - 1 ? '¡Empezar ahora!' : 'Siguiente'}
+      </button>
     </div>
   );
 };

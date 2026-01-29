@@ -1,15 +1,22 @@
 {
+  "name": "FinFlow - Finanzas Personales",
   "short_name": "FinFlow",
-  "name": "Fin Flow Money Control",
-  "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    }
-  ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "theme_color": "#f59e0b",
+  "description": "Tu asistente financiero personal",
+  "icons": [],
+  "shortcuts": [
+    {
+      "name": "Registrar Gasto",
+      "short_name": "Gasto",
+      "url": "/dashboard?action=new-expense"
+    },
+    {
+      "name": "Ver Metas",
+      "short_name": "Metas",
+      "url": "/goals"
+    }
+  ]
 }

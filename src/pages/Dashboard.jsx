@@ -1,321 +1,162 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useExpenseStore } from '../stores/expenseStore';
+import { useBudgetStore } from '../stores/budgetStore';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { calculateFinancialHealth, generateInsights } from '../utils/financialLogic';
+import { SYSTEM_CATEGORIES } from '../constants/categories';
 import Card from '../components/common/Card';
-import { DEFAULT_CATEGORIES } from '../constants/categories';
-
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell 
+} from 'recharts';
 
 const Dashboard = () => {
-  const { expenses, loadExpenses } = useExpenseStore();
+  const { expenses } = useExpenseStore();
+  const { budgets } = useBudgetStore();
   const { user } = useAuthStore();
   const { currency } = useSettingsStore();
 
-  useEffect(() => {
-    if (user) {
-      loadExpenses(user.uid);
-    }
-  }, [user]);
+  // 1. Cálculos de salud e insights
+  const health = useMemo(() => calculateFinancialHealth(expenses, budgets, 0), [expenses, budgets]);
+  const insights = useMemo(() => generateInsights(expenses, budgets, 0), [expenses, budgets]);
 
-  // Calcular datos del mes actual
-  const currentMonthData = useMemo(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // 2. Formateador de moneda
+  const formatMoney = (val) => new Intl.NumberFormat('es-MX', { 
+    style: 'currency', 
+    currency 
+  }).format(val);
 
-    const monthExpenses = expenses.filter((exp) => {
-      const expDate = new Date(exp.date);
-      return expDate >= firstDay && expDate <= lastDay;
+  // 3. Datos del Río Financiero (últimos 7 días)
+  const riverData = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dayTotal = expenses
+        .filter(e => new Date(e.date).toDateString() === d.toDateString())
+        .reduce((s, e) => s + e.amount, 0);
+      return { 
+        day: d.toLocaleDateString('es-MX', { weekday: 'short' }), 
+        amount: dayTotal 
+      };
     });
-
-    const total = monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const daysInMonth = lastDay.getDate();
-    const currentDay = now.getDate();
-    const daysRemaining = daysInMonth - currentDay;
-    const projection = (total / currentDay) * daysInMonth;
-
-    return {
-      total,
-      count: monthExpenses.length,
-      daysRemaining,
-      projection,
-      expenses: monthExpenses,
-    };
   }, [expenses]);
 
-  // Calcular mes anterior para comparación
-  const previousMonthData = useMemo(() => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+  // 4. Top Categorías del Mes
+  const categoryData = useMemo(() => {
+    const totals = expenses.reduce((acc, exp) => {
+      acc[exp.categoryId] = (acc[exp.categoryId] || 0) + exp.amount;
+      return acc;
+    }, {});
 
-    const monthExpenses = expenses.filter((exp) => {
-      const expDate = new Date(exp.date);
-      return expDate >= firstDay && expDate <= lastDay;
-    });
-
-    return monthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  }, [expenses]);
-
-  // Calcular score de salud financiera (simplificado)
-  const healthScore = useMemo(() => {
-    // Aquí puedes agregar lógica más compleja
-    // Por ahora, basado en comparación con mes anterior
-    const comparison = previousMonthData > 0 
-      ? ((previousMonthData - currentMonthData.total) / previousMonthData) * 100
-      : 50;
-    
-    const score = Math.max(0, Math.min(100, 70 + comparison));
-    return Math.round(score);
-  }, [currentMonthData, previousMonthData]);
-
-  // Top categorías del mes
-  const topCategories = useMemo(() => {
-    const categoryTotals = {};
-
-    currentMonthData.expenses.forEach((exp) => {
-      if (!categoryTotals[exp.categoryId]) {
-        categoryTotals[exp.categoryId] = 0;
-      }
-      categoryTotals[exp.categoryId] += exp.amount;
-    });
-
-    return Object.entries(categoryTotals)
-      .map(([id, total]) => {
-        const category = DEFAULT_CATEGORIES.find((cat) => cat.id === id);
-        return {
-          id,
-          name: category?.name || 'Otro',
-          icon: category?.icon || '💰',
-          total,
-          percentage: (total / currentMonthData.total) * 100,
-        };
+    return Object.entries(totals)
+      .map(([id, amount]) => {
+        const cat = SYSTEM_CATEGORIES.find(c => c.id === id);
+        return { name: cat?.label || 'Otro', value: amount, color: cat?.color || '#cbd5e1' };
       })
-      .sort((a, b) => b.total - a.total)
+      .sort((a, b) => b.value - a.value)
       .slice(0, 5);
-  }, [currentMonthData]);
+  }, [expenses]);
 
-  // Gastos hormiga (< $50)
-  const smallExpenses = useMemo(() => {
-    return currentMonthData.expenses
-      .filter((exp) => exp.amount < 50)
-      .reduce((sum, exp) => sum + exp.amount, 0);
-  }, [currentMonthData]);
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
-
-  const getHealthColor = (score) => {
-    if (score >= 70) return 'text-success-600';
-    if (score >= 40) return 'text-warning-600';
-    return 'text-danger-600';
-  };
-
-  const getHealthBgColor = (score) => {
-    if (score >= 70) return 'bg-success-500';
-    if (score >= 40) return 'bg-warning-500';
-    return 'bg-danger-500';
-  };
+  // 5. Gastos Hormiga (< $50)
+  const smallExpensesTotal = useMemo(() => {
+    return expenses
+      .filter(e => e.amount < 50)
+      .reduce((s, e) => s + e.amount, 0);
+  }, [expenses]);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-secondary-900 dark:text-white">
-          Dashboard
-        </h1>
-        <p className="text-secondary-600 dark:text-secondary-400 mt-1">
-          Tu resumen financiero del mes
-        </p>
-      </div>
+    <div className="space-y-6 pb-24">
+      <header>
+        <h1 className="text-2xl font-bold dark:text-white">Hola, {user?.displayName || 'Usuario'} 👋</h1>
+        <p className="text-secondary-500">Tu resumen financiero hoy.</p>
+      </header>
 
-      {/* Health Score */}
-      <Card>
-        <div className="flex items-center gap-6">
-          <div className="relative w-32 h-32">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                className="text-secondary-200 dark:text-secondary-700"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={`${(healthScore / 100) * 351.86} 351.86`}
-                className={getHealthBgColor(healthScore)}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <div className={`text-3xl font-bold ${getHealthColor(healthScore)}`}>
-                  {healthScore}
-                </div>
-                <div className="text-xs text-secondary-500">Score</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1">
-            <h3 className="text-2xl font-bold text-secondary-900 dark:text-white mb-2">
-              Salud Financiera
-            </h3>
-            <p className="text-secondary-600 dark:text-secondary-400">
-              {healthScore >= 70 && '¡Excelente! Tu salud financiera es muy buena 🎉'}
-              {healthScore >= 40 && healthScore < 70 && 'Vas bien, pero puedes mejorar 💪'}
-              {healthScore < 40 && 'Necesitas ajustar tus gastos ⚠️'}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Resumen del Mes */}
+      {/* Fila 1: Salud y Resumen rápido */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <div className="text-center">
-            <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
-              Total Gastado
-            </p>
-            <p className="text-3xl font-bold text-primary-600">
-              {formatCurrency(currentMonthData.total)}
-            </p>
-            <p className="text-xs text-secondary-500 mt-2">
-              {currentMonthData.count} gastos registrados
-            </p>
+        <Card className="md:col-span-2">
+          <div className="flex items-center gap-6">
+            <div className="relative w-24 h-24">
+              <svg className="w-full h-full" viewBox="0 0 36 36">
+                <path className="text-secondary-100 dark:text-secondary-800" strokeDasharray="100, 100" stroke="currentColor" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path className="text-primary-500" strokeDasharray={`${health.score}, 100`} stroke="currentColor" strokeWidth="3" strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center font-bold text-xl dark:text-white">{health.score}</div>
+            </div>
+            <div>
+              <h3 className="font-bold text-lg dark:text-white">Salud Financiera</h3>
+              <p className="text-sm text-secondary-500">Vas por buen camino, mantén el control.</p>
+            </div>
           </div>
         </Card>
-
+        
         <Card>
           <div className="text-center">
-            <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
-              Proyección Mes
-            </p>
-            <p className="text-3xl font-bold text-info-600">
-              {formatCurrency(currentMonthData.projection)}
-            </p>
-            <p className="text-xs text-secondary-500 mt-2">
-              Quedan {currentMonthData.daysRemaining} días
-            </p>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <p className="text-sm text-secondary-600 dark:text-secondary-400 mb-1">
-              vs Mes Anterior
-            </p>
-            <p
-              className={`text-3xl font-bold ${
-                currentMonthData.total < previousMonthData
-                  ? 'text-success-600'
-                  : 'text-danger-600'
-              }`}
-            >
-              {currentMonthData.total < previousMonthData ? '↓' : '↑'}{' '}
-              {Math.abs(
-                ((currentMonthData.total - previousMonthData) / previousMonthData) * 100
-              ).toFixed(1)}
-              %
-            </p>
-            <p className="text-xs text-secondary-500 mt-2">
-              {formatCurrency(Math.abs(currentMonthData.total - previousMonthData))}
-            </p>
+            <p className="text-sm text-secondary-500 mb-1">Total Gastado</p>
+            <p className="text-2xl font-bold text-primary-600">{formatMoney(health.totalSpent)}</p>
           </div>
         </Card>
       </div>
 
-      {/* Top 5 Categorías */}
-      <Card title="Top 5 Categorías del Mes">
-        <div className="space-y-4">
-          {topCategories.map((category) => (
-            <div key={category.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{category.icon}</span>
-                  <span className="font-medium text-secondary-900 dark:text-white">
-                    {category.name}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-secondary-900 dark:text-white">
-                    {formatCurrency(category.total)}
-                  </p>
-                  <p className="text-xs text-secondary-500">
-                    {category.percentage.toFixed(1)}%
-                  </p>
-                </div>
-              </div>
-              <div className="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-2">
-                <div
-                  className="bg-primary-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${category.percentage}%` }}
-                />
-              </div>
-            </div>
-          ))}
+      {/* Río Financiero */}
+      <Card title="Flujo de Gastos (7d)">
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={riverData}>
+              <defs>
+                <linearGradient id="colorAmt" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} />
+              <Tooltip />
+              <Area type="monotone" dataKey="amount" stroke="#f59e0b" strokeWidth={3} fill="url(#colorAmt)" />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </Card>
 
-      {/* Gastos Hormiga */}
-      {smallExpenses > 0 && (
-        <Card>
-          <div className="flex items-center gap-4">
-            <div className="text-4xl">🐜</div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-secondary-900 dark:text-white">
-                Gastos Hormiga
-              </h3>
-              <p className="text-sm text-secondary-600 dark:text-secondary-400">
-                Pequeños gastos que suman
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-warning-600">
-                {formatCurrency(smallExpenses)}
-              </p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Top Categorías */}
+        <Card title="Top Categorías">
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={categoryData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </Card>
-      )}
 
-      {/* Insights Automáticos */}
-      <Card title="💡 Insights">
-        <div className="space-y-3">
-          {currentMonthData.total > previousMonthData && (
-            <div className="p-4 bg-warning-50 dark:bg-warning-900/20 rounded-lg border border-warning-200 dark:border-warning-800">
-              <p className="text-sm text-warning-800 dark:text-warning-200">
-                Gastaste {((currentMonthData.total - previousMonthData) / previousMonthData * 100).toFixed(1)}% más que el mes pasado
-              </p>
+        {/* Insights y Hormiga */}
+        <div className="space-y-4">
+          <div className="p-4 bg-warning-50 rounded-2xl flex items-center justify-between border border-warning-100">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🐜</span>
+              <div>
+                <p className="font-bold text-warning-700">Gastos Hormiga</p>
+                <p className="text-xs text-warning-600">Pequeños gastos acumulados</p>
+              </div>
             </div>
-          )}
+            <p className="text-xl font-bold text-warning-700">{formatMoney(smallExpensesTotal)}</p>
+          </div>
 
-          {currentMonthData.total < previousMonthData && (
-            <div className="p-4 bg-success-50 dark:bg-success-900/20 rounded-lg border border-success-200 dark:border-success-800">
-              <p className="text-sm text-success-800 dark:text-success-200">
-                ¡Lograste ahorrar {formatCurrency(previousMonthData - currentMonthData.total)} este mes! 🎉
-              </p>
-            </div>
-          )}
-
-          <div className="p-4 bg-info-50 dark:bg-info-900/20 rounded-lg border border-info-200 dark:border-info-800">
-            <p className="text-sm text-info-800 dark:text-info-200">
-              A este ritmo, gastarás {formatCurrency(currentMonthData.projection)} este mes
-            </p>
+          <div className="space-y-2">
+            {insights.map((insight, i) => (
+              <div key={i} className="p-3 bg-white dark:bg-secondary-800 rounded-xl border border-secondary-100 dark:border-secondary-700 text-sm flex gap-2">
+                <span>💡</span> {insight.text}
+              </div>
+            ))}
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };
