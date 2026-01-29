@@ -1,73 +1,91 @@
 import React from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { exportToCSV } from '../utils/exportUtils';
 import { useExpenseStore } from '../stores/expenseStore';
+import { useBudgetStore } from '../stores/budgetStore';
+import { useGoalStore } from '../stores/goalStore';
+import { exportToCSV, exportFullBackupJSON } from '../utils/exportUtils';
 import Card from '../components/common/Card';
+import Button from '../components/common/Button';
 
 const Settings = () => {
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, deleteAccount } = useAuthStore();
   const { expenses } = useExpenseStore();
+  const { budgets } = useBudgetStore();
+  const { goals } = useGoalStore();
+
+  const handleFullBackup = () => {
+    // Requerimiento 11.2: Respaldo de TODOS los datos
+    const fullData = {
+      profile: { email: user.email, name: user.displayName },
+      expenses,
+      budgets,
+      goals,
+      backupDate: new Date().toISOString()
+    };
+    exportFullBackupJSON(fullData);
+  };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-8 pb-24 px-2">
       <header>
-        <h1 className="text-2xl font-bold dark:text-white">Configuración</h1>
-        <p className="text-secondary-500 text-sm">Gestiona tu cuenta y preferencias</p>
+        <h1 className="text-3xl font-black text-secondary-900 dark:text-white uppercase tracking-tighter">Configuración</h1>
       </header>
 
-      {/* Perfil del Usuario (Req 1.3) */}
-      <Card className="flex items-center gap-4">
-        <div className="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+      {/* Perfil */}
+      <Card className="flex items-center gap-5 p-6 border-primary-100 bg-primary-50/30">
+        <div className="w-16 h-16 bg-primary-600 rounded-[1.5rem] flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-primary-500/30">
           {user?.displayName?.charAt(0) || 'U'}
         </div>
         <div>
-          <h2 className="font-bold dark:text-white text-lg">{user?.displayName || 'Usuario FinFlow'}</h2>
-          <p className="text-sm text-secondary-500">{user?.email}</p>
+          <h2 className="font-black dark:text-white text-xl uppercase tracking-tight">{user?.displayName || 'Usuario'}</h2>
+          <p className="text-xs font-bold text-secondary-500 uppercase tracking-widest">{user?.email}</p>
         </div>
       </Card>
 
-      {/* Preferencias de App (Req 12.1 y 12.2) */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold text-secondary-500 uppercase px-1">Preferencias</h3>
-        <Card className="divide-y divide-secondary-100 dark:divide-secondary-800 p-0 overflow-hidden">
-          <div className="p-4 flex justify-between items-center">
-            <span className="dark:text-white">Moneda Principal</span>
-            <span className="font-bold text-primary-500">MXN</span>
-          </div>
-          <div className="p-4 flex justify-between items-center">
-            <span className="dark:text-white">Idioma</span>
-            <span className="font-bold text-primary-500">Español</span>
-          </div>
-        </Card>
-      </div>
+      {/* Datos y Respaldo */}
+      <section className="space-y-3">
+        <h3 className="text-[10px] font-black text-secondary-400 uppercase tracking-widest px-1">Gestión de Datos</h3>
+        <div className="grid grid-cols-1 gap-3">
+          <button onClick={() => exportToCSV(expenses)} className="text-left">
+            <Card hover className="flex items-center gap-4">
+              <span className="text-2xl">📊</span>
+              <div>
+                <p className="font-black text-sm dark:text-white uppercase tracking-tight">Exportar Excel</p>
+                <p className="text-[10px] text-secondary-500 font-bold uppercase">Descarga tus gastos en CSV</p>
+              </div>
+            </Card>
+          </button>
+          
+          <button onClick={handleFullBackup} className="text-left">
+            <Card hover className="flex items-center gap-4">
+              <span className="text-2xl">💾</span>
+              <div>
+                <p className="font-black text-sm dark:text-white uppercase tracking-tight">Respaldo Total</p>
+                <p className="text-[10px] text-secondary-500 font-bold uppercase">JSON con gastos, metas y presupuestos</p>
+              </div>
+            </Card>
+          </button>
+        </div>
+      </section>
 
-      {/* Exportación y Datos (Req 11.1) */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-bold text-secondary-500 uppercase px-1">Datos y Respaldo</h3>
-        <button 
-          onClick={() => exportToCSV(expenses)}
-          className="w-full"
-        >
-          <Card className="flex items-center gap-4 hover:bg-secondary-50 transition-colors">
-            <span className="text-xl">📊</span>
-            <div className="text-left">
-              <p className="font-bold dark:text-white">Exportar a CSV</p>
-              <p className="text-xs text-secondary-500">Descarga todos tus gastos para Excel</p>
-            </div>
-          </Card>
-        </button>
-      </div>
-
-      {/* Sesión */}
-      <button 
-        onClick={signOut}
-        className="w-full py-4 bg-danger-50 text-danger-600 rounded-2xl font-bold hover:bg-danger-100 transition-colors"
-      >
-        Cerrar Sesión
-      </button>
+      {/* Zona de Peligro */}
+      <section className="space-y-3">
+        <h3 className="text-[10px] font-black text-danger-500 uppercase tracking-widest px-1">Privacidad y Cuenta</h3>
+        <div className="bg-danger-50 dark:bg-danger-900/10 rounded-[2rem] p-2 border border-danger-100 dark:border-danger-900/30">
+          <button onClick={signOut} className="w-full p-4 text-left font-bold text-danger-600 hover:bg-danger-100/50 rounded-xl transition-colors flex justify-between">
+            Cerrar Sesión <span>→</span>
+          </button>
+          <button 
+            onClick={() => { if(window.confirm("¿BORRAR TODO? Esta acción es irreversible.")) deleteAccount(); }} 
+            className="w-full p-4 text-left font-bold text-danger-600 hover:bg-danger-100/50 rounded-xl transition-colors flex justify-between"
+          >
+            Eliminar Cuenta y Datos <span>🗑️</span>
+          </button>
+        </div>
+      </section>
       
-      <p className="text-center text-[10px] text-secondary-400">
-        FinFlow v1.0.0 - Built by Alvaro Aldama
+      <p className="text-center text-[10px] font-bold text-secondary-400 uppercase tracking-widest">
+        FinFlow v1.0.0 • {new Date().getFullYear()}
       </p>
     </div>
   );

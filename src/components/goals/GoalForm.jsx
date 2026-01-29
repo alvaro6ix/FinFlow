@@ -22,37 +22,35 @@ const GoalForm = ({ onSubmit, onCancel, initialData = null }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await onSubmit(formData);
+
+    // REQUERIMIENTO: Asegurar tipos numéricos para cálculos de salud financiera
+    const submissionData = {
+      ...formData,
+      targetAmount: parseFloat(formData.targetAmount),
+      currentAmount: parseFloat(formData.currentAmount || 0),
+      // Si hay fecha, la guardamos como objeto Date para Firebase
+      deadline: formData.deadline ? new Date(formData.deadline) : null,
+      updatedAt: new Date()
+    };
+
+    await onSubmit(submissionData);
     setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Input
-        label="Nombre de la meta"
+        label="¿Cuál es tu objetivo?"
         type="text"
         value={formData.name}
         onChange={(e) => handleChange('name', e.target.value)}
-        placeholder="Ej: Viaje a Europa, Auto nuevo, Fondo de emergencia"
+        placeholder="Ej: Viaje a Japón, Fondo de Emergencia..."
         required
       />
 
-      <div>
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
-          Descripción (opcional)
-        </label>
-        <textarea
-          value={formData.description}
-          onChange={(e) => handleChange('description', e.target.value)}
-          placeholder="Describe tu meta..."
-          rows={3}
-          className="w-full rounded-lg border border-secondary-300 dark:border-secondary-600 px-3 py-2 text-secondary-900 dark:text-white bg-white dark:bg-secondary-900 focus:outline-none focus:ring-2 focus:ring-primary-500"
-        />
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label="Monto objetivo"
+          label="Monto Objetivo"
           type="number"
           step="0.01"
           value={formData.targetAmount}
@@ -60,9 +58,8 @@ const GoalForm = ({ onSubmit, onCancel, initialData = null }) => {
           placeholder="0.00"
           required
         />
-
         <Input
-          label="Monto actual"
+          label="Ahorro Inicial"
           type="number"
           step="0.01"
           value={formData.currentAmount}
@@ -71,55 +68,52 @@ const GoalForm = ({ onSubmit, onCancel, initialData = null }) => {
         />
       </div>
 
-      <Input
-        label="Fecha límite (opcional)"
-        type="date"
-        value={formData.deadline}
-        onChange={(e) => handleChange('deadline', e.target.value)}
-      />
-
-      <Input
-        label="URL de imagen (opcional)"
-        type="url"
-        value={formData.imageUrl}
-        onChange={(e) => handleChange('imageUrl', e.target.value)}
-        placeholder="https://ejemplo.com/imagen.jpg"
-        helperText="Agrega una imagen motivacional para tu meta"
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Fecha Límite (Opcional)"
+          type="date"
+          value={formData.deadline}
+          min={new Date().toISOString().split('T')[0]} // No permitir fechas pasadas
+          onChange={(e) => handleChange('deadline', e.target.value)}
+        />
+        <Input
+          label="URL Imagen Motivacional"
+          type="url"
+          value={formData.imageUrl}
+          onChange={(e) => handleChange('imageUrl', e.target.value)}
+          placeholder="https://..."
+        />
+      </div>
 
       <div>
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-          Prioridad
+        <label className="block text-xs font-black text-secondary-400 uppercase tracking-widest mb-3">
+          Prioridad de la Meta
         </label>
         <div className="grid grid-cols-3 gap-2">
-          {['low', 'medium', 'high'].map((priority) => (
+          {[
+            { id: 'low', label: 'Baja', color: 'bg-blue-500' },
+            { id: 'medium', label: 'Media', color: 'bg-amber-500' },
+            { id: 'high', label: 'Alta', color: 'bg-red-500' }
+          ].map((p) => (
             <button
-              key={priority}
+              key={p.id}
               type="button"
-              onClick={() => handleChange('priority', priority)}
-              className={`
-                p-3 rounded-lg border-2 transition-all
-                ${formData.priority === priority
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-secondary-200 dark:border-secondary-700'
-                }
-              `}
+              onClick={() => handleChange('priority', p.id)}
+              className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center justify-center active:scale-95 ${
+                formData.priority === p.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-md'
+                  : 'border-secondary-100 dark:border-secondary-800 bg-white dark:bg-secondary-900'
+              }`}
             >
-              {priority === 'low' && '🔵 Baja'}
-              {priority === 'medium' && '🟡 Media'}
-              {priority === 'high' && '🔴 Alta'}
+              <div className={`w-3 h-3 rounded-full ${p.color} mb-1 shadow-sm`}></div>
+              <div className="text-[10px] font-black uppercase text-secondary-600 dark:text-secondary-400">{p.label}</div>
             </button>
           ))}
         </div>
       </div>
 
       <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          fullWidth
-        >
+        <Button type="button" variant="ghost" onClick={onCancel} fullWidth>
           Cancelar
         </Button>
         <Button
@@ -129,7 +123,7 @@ const GoalForm = ({ onSubmit, onCancel, initialData = null }) => {
           fullWidth
           disabled={!formData.name || !formData.targetAmount}
         >
-          {initialData ? 'Actualizar Meta' : 'Crear Meta'}
+          {initialData ? 'Actualizar Meta' : 'Empezar a Ahorrar'}
         </Button>
       </div>
     </form>

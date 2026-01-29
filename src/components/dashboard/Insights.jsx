@@ -13,15 +13,22 @@ const Insights = ({ insights = [] }) => {
   if (insights.length === 0) return null;
 
   return (
-    <Card title="💡 Insights">
-      <div className="space-y-3">
+    <Card title="💡 Insights Inteligentes">
+      <div className="flex flex-col gap-3">
         {insights.map((insight, index) => (
           <Alert
             key={index}
             type={getAlertType(insight)}
-            message={insight.message}
+            // Corrección: Usamos insight.text para coincidir con financialLogic.js
+            message={insight.text}
           />
         ))}
+      </div>
+      {/* Indicador de Asistente Proactivo */}
+      <div className="mt-4 pt-4 border-t border-secondary-100 dark:border-secondary-800">
+        <p className="text-[10px] text-secondary-400 uppercase font-bold tracking-widest text-center">
+          Analizado por FinFlow AI
+        </p>
       </div>
     </Card>
   );

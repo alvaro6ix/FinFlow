@@ -1,61 +1,53 @@
 import React from 'react';
 import Card from '../common/Card';
+import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
-const BudgetProgress = ({ budgets = [], expenses = [], currency = 'MXN' }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-      notation: 'compact',
-    }).format(amount);
+const BudgetProgress = ({ budget, spent = 0, currency = 'MXN' }) => {
+  const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
+  const threshold = budget.alertThreshold || 80;
+
+  const getStatus = () => {
+    if (percentage >= 100) return { color: 'bg-danger-500', text: 'EXCEDIDO', icon: <AlertCircle size={14} />, textColor: 'text-danger-600' };
+    if (percentage >= threshold) return { color: 'bg-warning-500', text: 'LIMITE CERCA', icon: <Info size={14} />, textColor: 'text-warning-600' };
+    return { color: 'bg-success-500', text: 'EN CONTROL', icon: <CheckCircle2 size={14} />, textColor: 'text-success-600' };
   };
 
-  const totalBudget = budgets.reduce((sum, budget) => sum + budget.amount, 0);
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const percentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
-
-  const getColor = () => {
-    if (percentage >= 100) return 'danger';
-    if (percentage >= 80) return 'warning';
-    return 'success';
-  };
+  const status = getStatus();
 
   return (
-    <Card title="Progreso General">
-      <div className="space-y-4">
-        <div className="text-center">
-          <div className="text-4xl font-bold text-primary-600 mb-2">
-            {percentage.toFixed(0)}%
+    <Card className="relative overflow-hidden group">
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-4">
+          <div className="text-3xl p-3 bg-secondary-100 dark:bg-secondary-800 rounded-2xl group-hover:scale-110 transition-transform">
+            {budget.categoryIcon || '💰'}
           </div>
-          <p className="text-sm text-secondary-600 dark:text-secondary-400">
-            Del presupuesto total utilizado
+          <div>
+            <h4 className="font-black text-secondary-900 dark:text-white uppercase tracking-tight text-sm">
+              {budget.categoryLabel}
+            </h4>
+            <div className={`flex items-center gap-1 text-[10px] font-black uppercase ${status.textColor}`}>
+              {status.icon} {status.text}
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-3xl font-black tracking-tighter text-secondary-900 dark:text-white">
+            {percentage.toFixed(0)}%
           </p>
         </div>
+      </div>
 
-        <div className="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-4">
+      {/* Barra de Progreso */}
+      <div className="space-y-2">
+        <div className="w-full bg-secondary-100 dark:bg-secondary-800 h-3 rounded-full overflow-hidden shadow-inner">
           <div
-            className={`h-4 rounded-full transition-all duration-500 ${
-              getColor() === 'success' ? 'bg-success-500' :
-              getColor() === 'warning' ? 'bg-warning-500' :
-              'bg-danger-500'
-            }`}
+            className={`h-full transition-all duration-1000 ease-out ${status.color}`}
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
-
-        <div className="flex justify-between text-sm">
-          <div>
-            <div className="text-secondary-600 dark:text-secondary-400">Gastado</div>
-            <div className="font-bold text-secondary-900 dark:text-white">
-              {formatCurrency(totalSpent)}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-secondary-600 dark:text-secondary-400">Total</div>
-            <div className="font-bold text-secondary-900 dark:text-white">
-              {formatCurrency(totalBudget)}
-            </div>
-          </div>
+        <div className="flex justify-between text-[10px] font-black text-secondary-400 uppercase tracking-widest">
+          <span>Gastado: ${spent.toLocaleString()}</span>
+          <span>Límite: ${budget.amount.toLocaleString()}</span>
         </div>
       </div>
     </Card>

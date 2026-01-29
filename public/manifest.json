@@ -1,19 +1,39 @@
 {
-  "name": "FinFlow - Finanzas Inteligentes",
+  "name": "FinFlow - Inteligencia Financiera",
   "short_name": "FinFlow",
+  "description": "App profesional para el control de gastos con análisis conductual.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#7c3aed",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
   "shortcuts": [
     {
-      "name": "Nuevo Gasto",
+      "name": "Registrar Gasto",
+      "short_name": "Gasto",
+      "description": "Abrir el registro rápido de gastos",
       "url": "/dashboard?action=new",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ver Metas",
+      "short_name": "Metas",
+      "description": "Ver progreso de metas de ahorro",
+      "url": "/goals",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

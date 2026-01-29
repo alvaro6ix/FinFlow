@@ -1,125 +1,126 @@
 import React, { useMemo } from 'react';
 import { useExpenseStore } from '../stores/expenseStore';
 import { SYSTEM_CATEGORIES, EMOTIONS } from '../constants/categories';
+import Layout from '../components/layout/Layout';
+import CategoryChart from '../components/analytics/CategoryChart';
+import TrendChart from '../components/analytics/TrendChart';
 import Card from '../components/common/Card';
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, 
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend 
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { format, startOfWeek, eachDayOfInterval, endOfWeek, isSameDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const Analytics = () => {
   const { expenses } = useExpenseStore();
 
-  const data = useMemo(() => {
-    // 1. Análisis por Categoría (Requerimiento 7.2)
+  const analysis = useMemo(() => {
+    // 1. Datos para CategoryChart
     const catMap = {};
     expenses.forEach(e => {
-      catMap[e.categoryName] = (catMap[e.categoryName] || 0) + e.amount;
+      catMap[e.categoryId] = (catMap[e.categoryId] || 0) + e.amount;
     });
-    const categoryData = Object.keys(catMap).map(name => ({
-      name,
-      value: catMap[name],
-      color: SYSTEM_CATEGORIES.find(c => c.label === name)?.color || '#94a3b8'
+    const categoryData = SYSTEM_CATEGORIES.map(c => ({
+      name: c.label,
+      value: catMap[c.id] || 0,
+      color: c.color
+    })).filter(c => c.value > 0);
+
+    const totalSpent = categoryData.reduce((sum, c) => sum + c.value, 0);
+
+    // 2. Datos para TrendChart (Días de la semana)
+    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const end = endOfWeek(new Date(), { weekStartsOn: 1 });
+    const trendData = eachDayOfInterval({ start, end }).map(day => ({
+      label: format(day, 'EEE', { locale: es }).toUpperCase(),
+      amount: expenses
+        .filter(e => isSameDay(new Date(e.date), day))
+        .reduce((sum, e) => sum + e.amount, 0)
     }));
 
-    // 2. Análisis Psicológico: Gastos por Emoción (Requerimiento 7.8)
-    const emoMap = {};
-    expenses.forEach(e => {
-      const emoLabel = EMOTIONS.find(emo => emo.id === e.emotion)?.label || 'Neutral';
-      emoMap[emoLabel] = (emoMap[emoLabel] || 0) + e.amount;
-    });
-    const emotionData = Object.keys(emoMap).map(name => ({ name, amount: emoMap[name] }));
+    // 3. Impacto Emocional (Requerimiento 7.8)
+    const emoData = EMOTIONS.map(emo => ({
+      name: emo.label,
+      amount: expenses
+        .filter(e => e.emotion === emo.id)
+        .reduce((sum, e) => sum + e.amount, 0),
+      color: emo.impact === 'impulse' ? '#ef4444' : '#10b981'
+    })).filter(e => e.amount > 0);
 
-    // 3. Análisis de Impulso vs Planificado (Requerimiento 7.8)
+    // 4. Detective Financiero (Requerimiento 13.3)
     const impulseTotal = expenses.filter(e => e.isImpulse).reduce((sum, e) => sum + e.amount, 0);
     const plannedTotal = expenses.filter(e => !e.isImpulse).reduce((sum, e) => sum + e.amount, 0);
+    const impulseRatio = (impulseTotal / (totalSpent || 1)) * 100;
 
-    return { categoryData, emotionData, impulseTotal, plannedTotal };
+    return { categoryData, totalSpent, trendData, emoData, impulseTotal, plannedTotal, impulseRatio };
   }, [expenses]);
 
   return (
-    <div className="space-y-8 pb-24">
-      <header>
-        <h1 className="text-2xl font-bold dark:text-white">Análisis Financiero</h1>
-        <p className="text-secondary-500 text-sm">Entiende tus patrones de consumo</p>
+    <div className="space-y-8 pb-32">
+      <header className="px-2">
+        <h1 className="text-3xl font-black text-secondary-900 dark:text-white uppercase tracking-tighter">Análisis <span className="text-primary-600">Pro</span></h1>
+        <p className="text-secondary-500 text-sm font-medium italic">Revelando tus patrones de comportamiento.</p>
       </header>
 
-      {/* Gráfico de Pastel: Distribución por Categoría */}
-      <Card>
-        <h3 className="text-sm font-bold mb-4 dark:text-white">Distribución por Categoría</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data.categoryData}
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {data.categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend verticalAlign="bottom" height={36}/>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <CategoryChart data={analysis.categoryData} total={analysis.totalSpent} />
+        <TrendChart data={analysis.trendData} />
+      </div>
 
-      {/* Análisis Psicológico: Gastos por Emoción */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <h3 className="text-sm font-bold mb-4 dark:text-white">Impacto Emocional ($)</h3>
-          <div className="h-64">
+        {/* Análisis Psicológico */}
+        <Card title="Impacto Emocional ($)">
+          <div className="h-64 mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.emotionData}>
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
+              <BarChart data={analysis.emoData}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
                 <YAxis hide />
                 <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="amount" fill="#7c3aed" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="amount" radius={[10, 10, 0, 0]}>
+                  {analysis.emoData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
         {/* Impulso vs Planificado */}
-        <Card className="flex flex-col justify-center text-center">
-          <h3 className="text-sm font-bold mb-6 dark:text-white">Impulso vs Planificado</h3>
-          <div className="space-y-6">
-            <div>
-              <p className="text-3xl font-bold text-danger-500">${data.impulseTotal.toFixed(2)}</p>
-              <p className="text-xs text-secondary-500 uppercase tracking-widest">Gastos por Impulso</p>
+        <Card title="Fuerza de Voluntad">
+          <div className="flex flex-col justify-center h-full space-y-8">
+            <div className="flex justify-between items-end">
+              <div>
+                <p className="text-4xl font-black text-danger-500 tracking-tighter">${analysis.impulseTotal.toFixed(0)}</p>
+                <p className="text-[10px] font-black text-secondary-400 uppercase">Impulso</p>
+              </div>
+              <div className="text-right">
+                <p className="text-4xl font-black text-success-500 tracking-tighter">${analysis.plannedTotal.toFixed(0)}</p>
+                <p className="text-[10px] font-black text-secondary-400 uppercase">Planificado</p>
+              </div>
             </div>
-            <div className="h-2 w-full bg-secondary-100 rounded-full overflow-hidden flex">
-               <div 
-                className="bg-danger-500 h-full" 
-                style={{ width: `${(data.impulseTotal / (data.impulseTotal + data.plannedTotal || 1)) * 100}%` }}
-               />
+            <div className="h-4 w-full bg-secondary-100 dark:bg-secondary-800 rounded-full overflow-hidden flex shadow-inner">
+               <div className="bg-danger-500 h-full transition-all duration-1000" style={{ width: `${analysis.impulseRatio}%` }} />
             </div>
-            <div>
-              <p className="text-3xl font-bold text-success-500">${data.plannedTotal.toFixed(2)}</p>
-              <p className="text-xs text-secondary-500 uppercase tracking-widest">Gastos Planificados</p>
-            </div>
+            <p className="text-center text-xs font-bold text-secondary-500 italic">
+              El {analysis.impulseRatio.toFixed(1)}% de tus gastos son por impulso.
+            </p>
           </div>
         </Card>
       </div>
 
       {/* Detective Financiero (Requerimiento 13.3) */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-bold dark:text-white px-1">Detective Financiero</h3>
-        <Card className="bg-primary-50 dark:bg-primary-900/20 border-primary-100">
-          <div className="flex gap-4">
-            <span className="text-2xl">🕵️‍♂️</span>
-            <p className="text-sm text-primary-900 dark:text-primary-100">
-              {data.impulseTotal > data.plannedTotal 
-                ? "Tus emociones están tomando el control. El 50% de tus gastos este mes fueron impulsivos."
-                : "¡Gran disciplina! La mayoría de tus gastos fueron planificados."}
+      <Card className="bg-gradient-to-br from-secondary-900 to-secondary-800 text-white border-none shadow-2xl">
+        <div className="flex items-start gap-6">
+          <div className="text-5xl">🕵️‍♂️</div>
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tight mb-2">Detective Financiero</h3>
+            <p className="text-secondary-300 text-sm leading-relaxed">
+              {analysis.impulseRatio > 40 
+                ? "Hemos detectado que tus emociones (especialmente el estrés) están disparando compras no planificadas. Sugerencia: Aplica la regla de las 24 horas en la categoría de Compras."
+                : "¡Excelente control! Tus patrones muestran que la mayoría de tus salidas de dinero están alineadas con tus objetivos a largo plazo."}
             </p>
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
     </div>
   );
 };

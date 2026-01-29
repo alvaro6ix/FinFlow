@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import { DEFAULT_CATEGORIES } from '../../constants/categories';
+import { SYSTEM_CATEGORIES } from '../../constants/categories';
 
 const BudgetForm = ({ onSubmit, onCancel, initialData = null }) => {
   const [formData, setFormData] = useState({
@@ -20,88 +20,57 @@ const BudgetForm = ({ onSubmit, onCancel, initialData = null }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await onSubmit(formData);
+    
+    // Inyectamos la metadata de la categoría para evitar Lookups pesados en el Dashboard
+    const category = SYSTEM_CATEGORIES.find(c => c.id === formData.categoryId);
+    
+    await onSubmit({
+      ...formData,
+      amount: parseFloat(formData.amount),
+      categoryLabel: category?.label,
+      categoryIcon: category?.icon,
+      categoryColor: category?.color
+    });
     setLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Category Selection */}
       <div>
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-          Categoría *
+        <label className="block text-xs font-black text-secondary-400 uppercase tracking-widest mb-3">
+          Categoría del Presupuesto
         </label>
         <div className="grid grid-cols-4 gap-2">
-          {DEFAULT_CATEGORIES.map((category) => (
+          {SYSTEM_CATEGORIES.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => handleChange('categoryId', category.id)}
-              className={`
-                p-3 rounded-lg border-2 transition-all
-                ${formData.categoryId === category.id
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-secondary-200 dark:border-secondary-700'
-                }
-              `}
+              className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center justify-center active:scale-90 ${
+                formData.categoryId === category.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-lg'
+                  : 'border-secondary-100 dark:border-secondary-800 bg-white dark:bg-secondary-900'
+              }`}
             >
               <div className="text-2xl mb-1">{category.icon}</div>
-              <div className="text-xs">{category.name}</div>
+              <div className="text-[8px] font-black uppercase text-center truncate w-full">{category.label}</div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Amount */}
       <Input
-        label="Monto del presupuesto"
+        label="Monto Máximo Permitido"
         type="number"
-        step="0.01"
         value={formData.amount}
         onChange={(e) => handleChange('amount', e.target.value)}
         placeholder="0.00"
         required
       />
 
-      {/* Period */}
-      <div>
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-          Período
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => handleChange('period', 'monthly')}
-            className={`
-              p-3 rounded-lg border-2 transition-all
-              ${formData.period === 'monthly'
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                : 'border-secondary-200 dark:border-secondary-700'
-              }
-            `}
-          >
-            📅 Mensual
-          </button>
-          <button
-            type="button"
-            onClick={() => handleChange('period', 'yearly')}
-            className={`
-              p-3 rounded-lg border-2 transition-all
-              ${formData.period === 'yearly'
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                : 'border-secondary-200 dark:border-secondary-700'
-              }
-            `}
-          >
-            📆 Anual
-          </button>
-        </div>
-      </div>
-
-      {/* Alert Threshold */}
-      <div>
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-2">
-          Alerta al alcanzar: {formData.alertThreshold}%
+      <div className="bg-secondary-50 dark:bg-secondary-800/50 p-6 rounded-3xl">
+        <label className="block text-xs font-black text-secondary-400 uppercase mb-4 text-center">
+          Alerta de Proximidad: {formData.alertThreshold}%
         </label>
         <input
           type="range"
@@ -110,32 +79,25 @@ const BudgetForm = ({ onSubmit, onCancel, initialData = null }) => {
           step="5"
           value={formData.alertThreshold}
           onChange={(e) => handleChange('alertThreshold', parseInt(e.target.value))}
-          className="w-full"
+          className="w-full accent-primary-500"
         />
-        <div className="flex justify-between text-xs text-secondary-500 mt-1">
+        <div className="flex justify-between text-[10px] font-bold text-secondary-400 mt-2">
           <span>50%</span>
+          <span>75%</span>
           <span>100%</span>
         </div>
       </div>
 
-      {/* Buttons */}
       <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          fullWidth
-        >
-          Cancelar
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          loading={loading}
-          fullWidth
+        <Button type="button" variant="ghost" onClick={onCancel} fullWidth>Cancelar</Button>
+        <Button 
+          type="submit" 
+          variant="primary" 
+          loading={loading} 
+          fullWidth 
           disabled={!formData.categoryId || !formData.amount}
         >
-          {initialData ? 'Actualizar' : 'Crear Presupuesto'}
+          {initialData ? 'Actualizar' : 'Crear Límite'}
         </Button>
       </div>
     </form>

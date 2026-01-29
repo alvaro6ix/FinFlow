@@ -1,60 +1,85 @@
 import React from 'react';
+import { 
+  CheckCircle2, 
+  AlertCircle, 
+  Info, 
+  WifiOff, 
+  X 
+} from 'lucide-react';
 
+/**
+ * Componente de Alerta Versátil.
+ * Soporta estados: success, error, warning, info y offline (Req 8.1).
+ */
 const Alert = ({ type = 'info', title, message, onClose, className = '' }) => {
   const types = {
     success: {
-      bg: 'bg-success-50 dark:bg-success-900/20',
-      border: 'border-success-200 dark:border-success-800',
-      text: 'text-success-800 dark:text-success-200',
-      icon: '✅',
+      bg: 'bg-green-50 dark:bg-green-900/20',
+      border: 'border-green-200 dark:border-green-800',
+      text: 'text-green-800 dark:text-green-200',
+      icon: <CheckCircle2 size={20} />,
     },
     error: {
-      bg: 'bg-danger-50 dark:bg-danger-900/20',
-      border: 'border-danger-200 dark:border-danger-800',
-      text: 'text-danger-800 dark:text-danger-200',
-      icon: '❌',
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      border: 'border-red-200 dark:border-red-800',
+      text: 'text-red-800 dark:text-red-200',
+      icon: <AlertCircle size={20} />,
     },
     warning: {
-      bg: 'bg-warning-50 dark:bg-warning-900/20',
-      border: 'border-warning-200 dark:border-warning-800',
-      text: 'text-warning-800 dark:text-warning-200',
-      icon: '⚠️',
+      bg: 'bg-amber-50 dark:bg-amber-900/20',
+      border: 'border-amber-200 dark:border-amber-800',
+      text: 'text-amber-800 dark:text-amber-200',
+      icon: <AlertCircle size={20} />,
     },
     info: {
-      bg: 'bg-info-50 dark:bg-info-900/20',
-      border: 'border-info-200 dark:border-info-800',
-      text: 'text-info-800 dark:text-info-200',
-      icon: 'ℹ️',
+      bg: 'bg-blue-50 dark:bg-blue-900/20',
+      border: 'border-blue-200 dark:border-blue-800',
+      text: 'text-blue-800 dark:text-blue-200',
+      icon: <Info size={20} />,
+    },
+    offline: {
+      bg: 'bg-secondary-900 dark:bg-black',
+      border: 'border-secondary-700',
+      text: 'text-white',
+      icon: <WifiOff size={20} className="animate-pulse text-primary-500" />,
     },
   };
 
-  const alertStyle = types[type];
+  const style = types[type] || types.info;
 
   return (
     <div
       className={`
-        ${alertStyle.bg} ${alertStyle.border} ${alertStyle.text}
-        border rounded-lg p-4 animate-slide-down
-        ${className}
+        flex items-start gap-4 p-4 rounded-[1.5rem] border transition-all duration-300
+        animate-in fade-in slide-in-from-top-4
+        ${style.bg} ${style.border} ${style.text} ${className}
       `}
+      role="alert"
     >
-      <div className="flex items-start gap-3">
-        <span className="text-2xl">{alertStyle.icon}</span>
-        <div className="flex-1">
-          {title && <h4 className="font-bold mb-1">{title}</h4>}
-          <p className="text-sm">{message}</p>
-        </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="text-current opacity-70 hover:opacity-100 transition-opacity"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
+      <div className="shrink-0 mt-0.5">
+        {style.icon}
       </div>
+      
+      <div className="flex-1">
+        {title && (
+          <h4 className="font-black text-xs uppercase tracking-widest mb-1">
+            {title}
+          </h4>
+        )}
+        <p className="text-sm font-medium leading-relaxed">
+          {message}
+        </p>
+      </div>
+
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="shrink-0 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+          aria-label="Cerrar alerta"
+        >
+          <X size={18} />
+        </button>
+      )}
     </div>
   );
 };

@@ -1,79 +1,38 @@
+// En src/components/onboarding/OnboardingTour.jsx
 import React, { useState } from 'react';
-import Card from '../common/Card';
+import TourStep from './TourStep';
 
-const TOUR_STEPS = [
-  {
-    title: "¡Bienvenido a FinFlow!",
-    description: "La herramienta para que tú y Huayra Mx tengan finanzas impecables. Vamos a darte un tour rápido.",
-    icon: "🚀"
-  },
-  {
-    title: "Registra en 3 Segundos",
-    description: "Usa el botón flotante (+) para anotar cualquier gasto al instante, incluso sin internet.",
-    icon: "⚡"
-  },
-  {
-    title: "Controla tu Psicología",
-    description: "Analizamos tus emociones para decirte si estás comprando por necesidad o por impulso.",
-    icon: "🧠"
-  },
-  {
-    title: "Alcanza tus Metas",
-    description: "Define objetivos como 'Viajes' o 'Inversión' y mira cómo tu ahorro progresa automáticamente.",
-    icon: "🎯"
-  }
+const STEPS_DATA = [
+  { icon: '📱', title: 'Registro Veloz', desc: 'Registra tus gastos en menos de 3 segundos con nuestro modal inteligente.' },
+  { icon: '📊', title: 'Análisis Pro', desc: 'Visualiza tu salud financiera con gráficos de nivel comercial y predicciones IA.' },
+  { icon: '🎯', title: 'Metas Claras', desc: 'Ahorra con propósito. Define tus objetivos y nosotros calculamos el tiempo.' },
+  { icon: '🛡️', title: 'Privacidad Total', desc: 'Tus datos son tuyos. Todo funciona offline y con cifrado de Firebase.' }
 ];
 
-const OnboardingTour = ({ onComplete }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+const OnboardingTour = ({ onComplete, onSkip }) => {
+  const [currentStep, setCurrentStep] = useState(1);
 
-  const nextStep = () => {
-    if (currentStep < TOUR_STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onComplete();
-    }
+  const handleNext = () => {
+    if (currentStep < STEPS_DATA.length) setCurrentStep(prev => prev + 1);
+    else onComplete();
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-primary-600/90 backdrop-blur-md p-6">
-      <div className="w-full max-w-sm animate-in zoom-in duration-300">
-        <Card className="text-center p-8 space-y-6 shadow-2xl">
-          <div className="text-6xl">{TOUR_STEPS[currentStep].icon}</div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold dark:text-white">
-              {TOUR_STEPS[currentStep].title}
-            </h2>
-            <p className="text-secondary-500 text-sm leading-relaxed">
-              {TOUR_STEPS[currentStep].description}
-            </p>
-          </div>
-          
-          <div className="flex flex-col gap-3 pt-4">
-            <button 
-              onClick={nextStep}
-              className="w-full py-4 bg-primary-500 text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-transform"
-            >
-              {currentStep === TOUR_STEPS.length - 1 ? "¡Empezar ahora!" : "Siguiente"}
-            </button>
-            <button 
-              onClick={onComplete}
-              className="text-xs text-secondary-400 uppercase tracking-widest font-bold"
-            >
-              Saltar tour
-            </button>
-          </div>
+  const handlePrev = () => setCurrentStep(prev => prev - 1);
 
-          <div className="flex justify-center gap-2">
-            {TOUR_STEPS.map((_, i) => (
-              <div 
-                key={i} 
-                className={`h-1.5 rounded-full transition-all ${i === currentStep ? 'w-6 bg-primary-500' : 'w-2 bg-secondary-200'}`} 
-              />
-            ))}
-          </div>
-        </Card>
-      </div>
+  const activeData = STEPS_DATA[currentStep - 1];
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-white dark:bg-secondary-950 flex items-center justify-center p-6">
+      <TourStep 
+        step={currentStep}
+        totalSteps={STEPS_DATA.length}
+        icon={activeData.icon}
+        title={activeData.title}
+        description={activeData.desc}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onSkip={onSkip}
+      />
     </div>
   );
 };

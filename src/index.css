@@ -5,10 +5,12 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
   
   body {
-    @apply bg-secondary-50 dark:bg-secondary-950 text-secondary-900 dark:text-white;
+    /* Fondo claro vs Fondo oscuro profundo */
+    @apply bg-secondary-50 dark:bg-secondary-950 text-secondary-900 dark:text-secondary-50 transition-colors duration-300;
     margin: 0;
     min-height: 100vh;
     font-family: 'Inter', system-ui, sans-serif;
@@ -16,27 +18,24 @@
 }
 
 @layer components {
-  /* Scrollbar personalizado sin errores de compilación */
+  /* Scrollbar estético */
   ::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
   }
-
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-
   ::-webkit-scrollbar-thumb {
-    @apply bg-secondary-300 dark:bg-secondary-700 rounded-full;
+    @apply bg-amber-500/20 dark:bg-amber-500/10 rounded-full hover:bg-amber-500/40;
   }
 
-  /* Evitamos el uso de hover problemático en el CSS directo */
+  /* Forzado de legibilidad en inputs */
+  input, textarea, select {
+    @apply bg-white dark:bg-secondary-900 border-secondary-200 dark:border-secondary-800 text-secondary-900 dark:text-white focus:ring-amber-500;
+  }
 }
 
-/* Clases de utilidad */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
+/* Remover flechas en inputs de número */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 

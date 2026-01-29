@@ -7,17 +7,41 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'FinFlow',
+        name: 'FinFlow - Inteligencia Financiera',
         short_name: 'FinFlow',
+        description: 'Gestión de gastos con análisis psicológico y offline-first',
         theme_color: '#f59e0b',
-        icons: []
+        background_color: '#ffffff',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*$/,
+            handler: 'NetworkOnly', // Firestore tiene su propia persistencia
+          }
+        ]
       }
     })
   ],
   build: {
     outDir: 'dist',
-    assetsDir: 'assets',
-    emptyOutDir: true
+    sourcemap: true
   }
 })

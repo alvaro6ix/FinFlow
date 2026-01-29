@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { useExpenseStore } from '../stores/expenseStore';
 import { useBudgetStore } from '../stores/budgetStore';
+import { useAuthStore } from '../stores/authStore';
 import Card from '../components/common/Card';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Dashboard = () => {
   const { expenses } = useExpenseStore();
   const { budgets } = useBudgetStore();
+  const { user } = useAuthStore();
 
   const metrics = useMemo(() => {
     const now = new Date();
@@ -17,85 +19,70 @@ const Dashboard = () => {
 
     const totalSpent = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
     const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-    
-    // GASTOS HORMIGA (Requerimiento 4.1)
-    const antExpenses = currentMonthExpenses.filter(e => e.amount < 50);
-    const antTotal = antExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const antTotal = currentMonthExpenses.filter(e => e.amount < 50).reduce((sum, e) => sum + e.amount, 0);
 
-    // SCORE DE SALUD (Requerimiento 4.1)
     let score = 100;
     if (totalBudget > 0) {
       const ratio = totalSpent / totalBudget;
-      if (ratio > 1) score = 30;
-      else if (ratio > 0.8) score = 60;
-      else score = 90;
+      score = ratio > 1 ? 30 : ratio > 0.8 ? 60 : 95;
     }
 
     return { totalSpent, totalBudget, antTotal, score, count: currentMonthExpenses.length };
   }, [expenses, budgets]);
 
+  // Color de Salud Financiera dinámico
   const scoreColor = metrics.score > 70 ? '#10b981' : metrics.score > 40 ? '#f59e0b' : '#ef4444';
 
   return (
     <div className="space-y-6 pb-24">
-      {/* Saludo y Score */}
-      <div className="flex items-center justify-between">
+      {/* Saludo dinámico aislado de otros proyectos */}
+      <div className="flex items-center justify-between px-1">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white">Hola, Alvaro</h1>
-          <p className="text-secondary-500 text-sm">Huayra Mx - Resumen de hoy</p>
+          <h1 className="text-3xl font-black text-secondary-900 dark:text-white uppercase tracking-tighter leading-none">
+            Hola, {user?.displayName?.split(' ')[0] || 'Usuario'}
+          </h1>
+          <p className="text-secondary-500 text-xs font-bold uppercase tracking-widest mt-1">
+            Resumen de actividad personal
+          </p>
         </div>
-        <div className="relative flex items-center justify-center w-16 h-16">
+        <div className="relative flex items-center justify-center w-14 h-14">
           <svg className="w-full h-full transform -rotate-90">
-            <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-secondary-200 dark:text-secondary-800" />
-            <circle cx="32" cy="32" r="28" stroke={scoreColor} strokeWidth="4" fill="transparent" strokeDasharray={175} strokeDashoffset={175 - (175 * metrics.score) / 100} strokeLinecap="round" />
+            <circle cx="28" cy="28" r="24" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-secondary-100 dark:text-secondary-800" />
+            <circle cx="28" cy="28" r="24" stroke={scoreColor} strokeWidth="4" fill="transparent" strokeDasharray={150} strokeDashoffset={150 - (150 * metrics.score) / 100} strokeLinecap="round" className="transition-all duration-1000" />
           </svg>
-          <span className="absolute text-xs font-bold" style={{ color: scoreColor }}>{metrics.score}</span>
+          <span className="absolute text-[10px] font-black" style={{ color: scoreColor }}>{metrics.score}%</span>
         </div>
       </div>
 
-      {/* Cards de Resumen */}
       <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-primary-600 text-white border-none">
-          <p className="text-[10px] uppercase opacity-80">Gastado</p>
-          <p className="text-xl font-bold">${metrics.totalSpent.toLocaleString()}</p>
+        <Card className="bg-amber-500 text-white border-none shadow-lg shadow-amber-500/20">
+          <p className="text-[10px] font-black uppercase opacity-80 mb-1">Total Gastado</p>
+          <p className="text-2xl font-black">${metrics.totalSpent.toLocaleString()}</p>
         </Card>
-        <Card>
-          <p className="text-[10px] uppercase text-secondary-500">Gastos Hormiga</p>
-          <p className="text-xl font-bold text-danger-500">${metrics.antTotal.toLocaleString()}</p>
+        <Card className="bg-white dark:bg-secondary-900">
+          <p className="text-[10px] font-black uppercase text-secondary-400 mb-1">Gastos Hormiga</p>
+          <p className="text-2xl font-black text-red-500">${metrics.antTotal.toLocaleString()}</p>
         </Card>
       </div>
 
-      {/* Insights Requerimiento 4.1 */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold dark:text-white px-1">Insights del Mes</h3>
-        <Card className="border-l-4 border-l-primary-500">
-          <p className="text-sm dark:text-secondary-300">
+        <h3 className="text-[10px] font-black text-secondary-400 uppercase tracking-widest px-1">Insights del Mes</h3>
+        <Card className="border-l-4 border-l-amber-500">
+          <p className="text-sm font-bold text-secondary-700 dark:text-secondary-200 leading-tight">
             {metrics.totalSpent > metrics.totalBudget && metrics.totalBudget > 0 
-              ? "⚠️ Has superado tu presupuesto mensual."
-              : `🎉 Llevas ${metrics.count} registros este mes. ¡Buen seguimiento!`}
+              ? "Has superado tu límite. Revisa tus presupuestos."
+              : `Llevas ${metrics.count} registros este mes. ¡Sigue así!`}
           </p>
         </Card>
-        {metrics.antTotal > 500 && (
-          <Card className="border-l-4 border-l-warning-500">
-            <p className="text-sm dark:text-secondary-300">
-              🕵️ Tus "gastos hormiga" suman <strong>${metrics.antTotal}</strong>. Podrías invertirlos en tu meta.
-            </p>
-          </Card>
-        )}
       </div>
 
-      {/* Gráfico Río Financiero (Simplificado para Mobile) */}
       <Card>
-        <h3 className="text-xs font-bold mb-4 uppercase text-secondary-500">Flujo de Gastos</h3>
+        <h3 className="text-[10px] font-black uppercase text-secondary-400 mb-6 tracking-widest">Flujo de Gastos Recientes</h3>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={expenses.slice(0, 7).reverse()}>
-              <XAxis dataKey="date" hide />
-              <Tooltip 
-                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                formatter={(value) => [`$${value}`, 'Monto']}
-              />
-              <Bar dataKey="amount" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+            <BarChart data={expenses.slice(0, 6).reverse()}>
+              <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: 'none', shadow: 'lg', fontWeight: 'bold' }} />
+              <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </div>
