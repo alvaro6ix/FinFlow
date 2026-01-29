@@ -1,31 +1,18 @@
 import { create } from 'zustand';
 import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot,
-  addDoc,
-  serverTimestamp 
+  collection, addDoc, query, where, orderBy, onSnapshot, 
+  serverTimestamp, deleteDoc, doc, updateDoc 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export const useExpenseStore = create((set, get) => ({
   expenses: [],
   loading: false,
-  error: null,
   unsubscribe: null,
 
   subscribeExpenses: (userId) => {
     if (!userId) return;
-
-    // Limpieza segura: solo ejecutamos si es función
-    const currentUnsub = get().unsubscribe;
-    if (typeof currentUnsub === 'function') {
-      currentUnsub();
-    }
-
-    set({ loading: true });
+    if (get().unsubscribe) get().unsubscribe();
 
     const q = query(
       collection(db, 'expenses'),
@@ -33,40 +20,50 @@ export const useExpenseStore = create((set, get) => ({
       orderBy('date', 'desc')
     );
 
-    // Esta es la suscripción que actualiza la página sola
     const unsub = onSnapshot(q, (snapshot) => {
-      const expensesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        // Convertimos el Timestamp de Firebase a Date de JS
-        date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date),
+      const data = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        date: d.data().date?.toDate() || new Date()
       }));
-      set({ expenses: expensesData, loading: false, error: null });
-    }, (error) => {
-      console.error("CRÍTICO: Error en tiempo real", error);
-      set({ error: error.message, loading: false });
+      set({ expenses: data, loading: false });
     });
 
     set({ unsubscribe: unsub });
   },
 
-  addExpense: async (expenseData) => {
+  addExpense: async (data) => {
     try {
       await addDoc(collection(db, 'expenses'), {
-        ...expenseData,
+        ...data,
         createdAt: serverTimestamp(),
       });
       return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  updateExpense: async (id, data) => {
+    try {
+      await updateDoc(doc(db, 'expenses', id), data);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  deleteExpense: async (id) => {
+    try {
+      await deleteDoc(doc(db, 'expenses', id));
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
   },
 
   clearExpenses: () => {
-    const currentUnsub = get().unsubscribe;
-    if (typeof currentUnsub === 'function') {
-      currentUnsub();
-    }
+    if (get().unsubscribe) get().unsubscribe();
     set({ expenses: [], unsubscribe: null });
   }
 }));

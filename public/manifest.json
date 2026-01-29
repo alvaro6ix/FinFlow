@@ -1,22 +1,19 @@
 {
-  "name": "FinFlow - Finanzas Personales",
+  "name": "FinFlow - Finanzas Inteligentes",
   "short_name": "FinFlow",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#f59e0b",
-  "description": "Tu asistente financiero personal",
-  "icons": [],
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
   "shortcuts": [
     {
-      "name": "Registrar Gasto",
-      "short_name": "Gasto",
-      "url": "/dashboard?action=new-expense"
-    },
-    {
-      "name": "Ver Metas",
-      "short_name": "Metas",
-      "url": "/goals"
+      "name": "Nuevo Gasto",
+      "url": "/dashboard?action=new",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
