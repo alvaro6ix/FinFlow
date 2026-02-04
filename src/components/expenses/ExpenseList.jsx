@@ -1,58 +1,35 @@
-import React from 'react';
-import ExpenseCard from './ExpenseCard';
+import { useState } from "react";
+import ExpenseItem from "./ExpenseItem";
+import ExpenseDetails from "./ExpenseDetails";
 
-const ExpenseList = ({ expenses = [], onDelete, onEdit, currency }) => {
-  if (expenses.length === 0) {
+export default function ExpenseList({ expenses, onDelete }) {
+  const [selectedExpense, setSelectedExpense] = useState(null);
+
+  if (!expenses || expenses.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-6xl mb-4">📊</div>
-        <h3 className="text-xl font-bold text-secondary-900 dark:text-white mb-2">
-          No hay gastos registrados
-        </h3>
-        <p className="text-secondary-600 dark:text-secondary-400">
-          Usa el botón + para agregar tu primer gasto
-        </p>
+      <div className="flex flex-col items-center justify-center py-20 opacity-30">
+        <p className="text-[10px] font-black uppercase tracking-widest text-secondary-400">Sin movimientos registrados</p>
       </div>
     );
   }
 
-  // Agrupar por fecha
-  const groupedExpenses = expenses.reduce((groups, expense) => {
-    const date = new Date(expense.date).toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(expense);
-    return groups;
-  }, {});
-
   return (
-    <div className="space-y-6">
-      {Object.entries(groupedExpenses).map(([date, expensesForDate]) => (
-        <div key={date}>
-          <h3 className="text-sm font-semibold text-secondary-500 dark:text-secondary-400 mb-3">
-            {date}
-          </h3>
-          <div className="space-y-3">
-            {expensesForDate.map((expense) => (
-              <ExpenseCard
-                key={expense.id}
-                expense={expense}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                currency={currency}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+    <>
+      <div className="space-y-4">
+        {expenses.map((e) => (
+          <ExpenseItem
+            key={e.id}
+            expense={e}
+            onDelete={onDelete}
+            onSelect={setSelectedExpense}
+          />
+        ))}
+      </div>
 
-export default ExpenseList;
+      <ExpenseDetails
+        expense={selectedExpense}
+        onClose={() => setSelectedExpense(null)}
+      />
+    </>
+  );
+}

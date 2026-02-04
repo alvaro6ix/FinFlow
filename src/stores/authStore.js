@@ -6,130 +6,135 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   updateProfile,
-  updatePassword,
-  deleteUser,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase/config';
 
-const useAuthStore = create((set) => ({
+export const useAuthStore = create((set) => ({
   user: null,
-  loading: true, // Empezamos en true para evitar parpadeos de rutas
+  loading: false,
   error: null,
 
-  // Iniciar sesión con email y contraseña
+  // ====== helpers ======
+  setUser: (user) => set({ user, loading: false, error: null }),
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
+  clearError: () => set({ error: null }),
+
+  // ====== LOGIN ======
   signIn: async (email, password) => {
     set({ loading: true, error: null });
+
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      // No seteamos el usuario aquí, dejamos que onAuthStateChanged en App.jsx lo haga
+      await signInWithEmailAndPassword(auth, email, password);
+      set({ loading: false, error: null });
       return { success: true };
+
     } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+      console.log("Firebase error:", error.code);
+
+      let message = "Correo o contraseña incorrectos";
+
+      if (error.code === "auth/invalid-email") {
+        message = "El formato del correo es inválido";
+      } 
+      else if (error.code === "auth/too-many-requests") {
+        message = "Demasiados intentos. Intenta más tarde";
+      } 
+      else if (error.code === "auth/network-request-failed") {
+        message = "Error de conexión. Revisa tu internet";
+      }
+
+      set({ error: message, loading: false });
+      return { success: false, error: message };
     }
   },
 
-  // Registrarse con email y contraseña
+  // ====== REGISTRO ======
   signUp: async (email, password, displayName) => {
     set({ loading: true, error: null });
+
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
+
+      set({ loading: false, error: null });
       return { success: true };
+
     } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+      console.log("Firebase error:", error.code);
+
+      let message = "Error al crear la cuenta";
+
+      if (error.code === "auth/email-already-in-use") {
+        message = "Este correo ya está registrado";
+      } 
+      else if (error.code === "auth/weak-password") {
+        message = "La contraseña debe tener al menos 6 caracteres";
+      } 
+      else if (error.code === "auth/invalid-email") {
+        message = "El formato del correo es inválido";
+      }
+
+      set({ error: message, loading: false });
+      return { success: false, error: message };
     }
   },
 
-  // Iniciar sesión con Google
+  // ====== GOOGLE ======
   signInWithGoogle: async () => {
     set({ loading: true, error: null });
+
     try {
       await signInWithPopup(auth, googleProvider);
+      set({ loading: false, error: null });
       return { success: true };
+
     } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+      console.log("Google error:", error.code);
+      set({ error: "Error al iniciar sesión con Google", loading: false });
+      return { success: false };
     }
   },
 
-  // Cerrar sesión
-  signOut: async () => {
-    set({ loading: true, error: null });
-    try {
-      await firebaseSignOut(auth);
-      set({ user: null, loading: false });
-      return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Recuperar contraseña
+  // ====== RESET PASSWORD ======
   resetPassword: async (email) => {
     set({ loading: true, error: null });
+
     try {
       await sendPasswordResetEmail(auth, email);
-      set({ loading: false });
+      set({ loading: false, error: null });
       return { success: true };
+
     } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+      console.log("Reset error:", error.code);
+
+      let message = "No se pudo enviar el correo";
+
+      if (error.code === "auth/user-not-found") {
+        message = "No existe una cuenta con este correo";
+      } 
+      else if (error.code === "auth/invalid-email") {
+        message = "El formato del correo es inválido";
+      }
+
+      set({ error: message, loading: false });
+      return { success: false, error: message };
     }
   },
 
-  // Actualizar perfil
-  updateUserProfile: async (updates) => {
-    set({ loading: true, error: null });
+  // ====== LOGOUT ======
+  signOut: async () => {
+    set({ loading: true });
+
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("No hay usuario autenticado");
-      await updateProfile(currentUser, updates);
-      // El observador onAuthStateChanged detectará cambios en algunos casos, 
-      // pero forzamos actualización local para la UI
-      set({ user: { ...currentUser, ...updates }, loading: false });
+      await firebaseSignOut(auth);
+      set({ user: null, loading: false, error: null });
       return { success: true };
+
     } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+      console.log("Logout error:", error.code);
+      set({ error: "Error al cerrar sesión", loading: false });
+      return { success: false };
     }
   },
-
-  // Cambiar contraseña
-  changePassword: async (newPassword) => {
-    set({ loading: true, error: null });
-    try {
-      const currentUser = auth.currentUser;
-      await updatePassword(currentUser, newPassword);
-      set({ loading: false });
-      return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Eliminar cuenta
-  deleteAccount: async () => {
-    set({ loading: true, error: null });
-    try {
-      const currentUser = auth.currentUser;
-      await deleteUser(currentUser);
-      set({ user: null, loading: false });
-      return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // MÉTODO CRÍTICO: Sincroniza el estado global con Firebase
-  setUser: (user) => set({ user, loading: false }),
-
-  // Limpiar errores
-  clearError: () => set({ error: null }),
 }));
-
-export { useAuthStore };

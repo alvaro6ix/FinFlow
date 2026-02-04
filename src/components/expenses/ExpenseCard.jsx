@@ -1,78 +1,49 @@
-import React from 'react';
-import Card from '../common/Card';
-import Badge from '../common/Badge';
-import { DEFAULT_CATEGORIES } from '../../constants/categories';
+import { Trash2, Image, MapPin } from "lucide-react";
+import { SYSTEM_CATEGORIES } from "../../constants/categories";
 
-const ExpenseCard = ({ expense, onDelete, onEdit, currency = 'MXN' }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('es-MX', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const category = DEFAULT_CATEGORIES.find(cat => cat.id === expense.categoryId);
+export default function ExpenseCard({ expense, onDelete, onOpen }) {
+  const category = SYSTEM_CATEGORIES.find(c => c.id === expense.categoryId);
 
   return (
-    <Card hover className="cursor-pointer">
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center text-2xl">
-          {category?.icon || '💰'}
-        </div>
-        
-        <div className="flex-1">
-          <h3 className="font-bold text-secondary-900 dark:text-white">
-            {expense.description}
-          </h3>
-          <div className="flex items-center gap-2 text-sm text-secondary-600 dark:text-secondary-400 mt-1">
-            <span>{category?.name || 'Otro'}</span>
-            <span>•</span>
-            <span>{formatDate(expense.date)}</span>
-            {expense.paymentMethod && (
-              <>
-                <span>•</span>
-                <Badge size="sm" variant="default">
-                  {expense.paymentMethod}
-                </Badge>
-              </>
-            )}
-          </div>
+    <div className="bg-white dark:bg-secondary-900 rounded-2xl p-4 shadow-md hover:shadow-xl transition flex justify-between gap-4">
+      {/* INFO */}
+      <div className="flex-1">
+        <p className="font-black text-sm">
+          {expense.description || category?.label || "Gasto"}
+        </p>
+
+        <div className="flex items-center gap-2 text-xs text-secondary-500 mt-1">
+          <span>{category?.icon}</span>
+          <span>{category?.label}</span>
+          <span>•</span>
+          <span className="uppercase">{expense.purchaseType}</span>
+          <span>{expense.emotion && `• ${expense.emotion}`}</span>
         </div>
 
-        <div className="text-right">
-          <div className="text-xl font-bold text-primary-600">
-            {formatCurrency(expense.amount)}
-          </div>
-          <div className="flex gap-2 mt-2">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(expense)}
-                className="text-sm text-info-600 hover:text-info-700"
-              >
-                Editar
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => onDelete(expense.id)}
-                className="text-sm text-danger-600 hover:text-danger-700"
-              >
-                Eliminar
-              </button>
-            )}
-          </div>
+        <p className="text-[10px] text-secondary-400 mt-1">
+          {new Date(expense.date).toLocaleDateString("es-MX")}
+        </p>
+
+        {/* EXTRAS */}
+        <div className="flex gap-2 mt-2">
+          {expense.imageUrl && <Image size={14} />}
+          {expense.location && <MapPin size={14} />}
         </div>
       </div>
-    </Card>
-  );
-};
 
-export default ExpenseCard;
+      {/* AMOUNT */}
+      <div className="text-right">
+        <p className="text-lg font-black text-red-500">
+          ${expense.amount.toLocaleString()}
+        </p>
+
+        <button
+          onClick={() => onDelete(expense.id)}
+          className="text-[10px] text-red-400 hover:text-red-600 flex items-center gap-1 justify-end mt-1"
+        >
+          <Trash2 size={12} /> Eliminar
+        </button>
+      </div>
+    </div>
+  );
+}

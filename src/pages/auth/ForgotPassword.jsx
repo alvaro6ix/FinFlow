@@ -1,95 +1,88 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import Alert from '../../components/common/Alert';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const { resetPassword, loading } = useAuthStore();
-  const [error, setError] = useState('');
+  const [isSent, setIsSent] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const { resetPassword, loading, error, clearError } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleSend = async () => {
+    clearError();
+
+    console.log("👉 Enviando reset a:", email);
 
     const result = await resetPassword(email);
-    
+
+    console.log("👉 Resultado:", result);
+
     if (result.success) {
-      setSent(true);
-    } else {
-      setError('Error al enviar el correo de recuperación');
+      setIsSent(true);
+
+      setTimeout(() => {
+        navigate('/login');
+      }, 3500);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 dark:from-secondary-950 dark:via-secondary-900 dark:to-secondary-950 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-500 rounded-2xl shadow-lg mb-4">
-            <span className="text-4xl">🔐</span>
+    <div className="min-h-screen flex items-center justify-center bg-secondary-50 dark:bg-secondary-950 p-6">
+      <div className="max-w-md w-full bg-white dark:bg-secondary-900 p-8 rounded-3xl shadow-xl">
+
+        <h2 className="text-2xl font-black text-center dark:text-white uppercase mb-6 tracking-tighter">
+          Recuperar Cuenta
+        </h2>
+
+        {isSent ? (
+          <div className="text-center p-6 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-2xl font-bold">
+            <p className="mb-2">✅ Correo enviado correctamente</p>
+            <p className="text-sm">
+              Revisa tu bandeja de entrada o la carpeta de <b>spam</b>.
+            </p>
+            <p className="text-xs mt-2 opacity-80">
+              Redirigiendo al login…
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-secondary-900 dark:text-white mb-2">
-            Recuperar Contraseña
-          </h1>
-          <p className="text-secondary-600 dark:text-secondary-400">
-            Te enviaremos un enlace para restablecer tu contraseña
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-secondary-900 rounded-2xl shadow-lg p-8">
-          {sent ? (
-            <div className="text-center space-y-4">
-              <Alert
-                type="success"
-                title="¡Correo enviado!"
-                message="Revisa tu bandeja de entrada"
-              />
-              <p className="text-sm text-secondary-600 dark:text-secondary-400">
-                Hemos enviado un enlace de recuperación a <strong>{email}</strong>
-              </p>
-              <Link to="/login">
-                <Button variant="outline" fullWidth>
-                  Volver al inicio de sesión
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <Alert type="error" message={error} className="mb-4" />
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  label="Email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  required
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                  }
-                />
-
-                <Button type="submit" variant="primary" size="lg" fullWidth loading={loading}>
-                  Enviar Enlace de Recuperación
-                </Button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <Link to="/login" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                  ← Volver al inicio de sesión
-                </Link>
+        ) : (
+          <div className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs rounded-xl font-bold text-center">
+                {error}
               </div>
-            </>
-          )}
-        </div>
+            )}
+
+            <Input
+              label="Email de recuperación"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
+              required
+            />
+
+            {/* BOTÓN HTML PURO (NO FALLA) */}
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={loading}
+              className="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold transition disabled:opacity-60"
+            >
+              {loading ? 'Enviando…' : 'Enviar instrucciones'}
+            </button>
+
+            <Link
+              to="/login"
+              onClick={clearError}
+              className="block text-center text-secondary-500 text-sm font-bold mt-4 hover:text-primary-600 underline underline-offset-4"
+            >
+              Volver al inicio
+            </Link>
+          </div>
+        )}
+
       </div>
     </div>
   );
