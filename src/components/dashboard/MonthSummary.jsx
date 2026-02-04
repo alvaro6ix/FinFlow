@@ -1,63 +1,73 @@
-import React from 'react';
-import Card from '../common/Card';
-import Badge from '../common/Badge';
-import { TrendingUp, TrendingDown, Target, Zap } from 'lucide-react';
+import React from "react";
+import Card from "../common/Card";
+import { TrendingDown, TrendingUp, CalendarDays, Info } from "lucide-react";
 
-const MonthSummary = ({ total = 0, count = 0, projection = 0, comparison = 0, currency = 'MXN' }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+const MonthSummary = ({ spent, budget, lastMonthSpent }) => {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const currentDay = now.getDate();
+  const daysRemaining = daysInMonth - currentDay;
+
+  // Proyección Real: (Gasto / días transcurridos) * total días del mes
+  const averagePerDay = currentDay > 0 ? spent / currentDay : 0;
+  const projection = averagePerDay * daysInMonth;
+  
+  const diffAmount = spent - lastMonthSpent;
+  const diffPercent = lastMonthSpent > 0 ? (diffAmount / lastMonthSpent) * 100 : 0;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Total Gastado - Enfoque Principal */}
-      <Card className="relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <TrendingUp size={64} className="text-primary-600" />
-        </div>
-        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">Total Gastado</p>
-        <p className="text-4xl font-black text-primary-600 tracking-tighter">
-          {formatCurrency(total)}
-        </p>
-        <div className="mt-4 flex items-center justify-between">
-          <Badge variant="primary">{count} Transacciones</Badge>
-          <span className="text-[10px] text-secondary-400 font-bold">MES ACTUAL</span>
-        </div>
-      </Card>
+    <Card className="p-5 sm:p-7 bg-white dark:bg-secondary-900 border-none shadow-xl rounded-[2.5rem] h-full">
+      <div className="flex flex-col h-full justify-between gap-6">
+        
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+          <div className="space-y-4 flex-1">
+            <div>
+              <p className="text-[10px] font-black uppercase text-secondary-400 tracking-widest mb-1">Total hoy (Día {currentDay})</p>
+              <p className="text-4xl font-black text-secondary-900 dark:text-white tracking-tighter">
+                ${spent.toLocaleString()}
+              </p>
+            </div>
+            
+            <div className="relative group">
+              <div className="flex items-center gap-1.5 mb-1">
+                <p className="text-[10px] font-black uppercase text-secondary-400 tracking-widest">Proyección al cierre</p>
+                <Info size={10} className="text-secondary-300 cursor-help" />
+                
+                {/* TOOLTIP EXPLICATIVO */}
+                <div className="absolute bottom-full left-0 mb-2 w-48 p-3 bg-secondary-900 text-white text-[8px] font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50 uppercase leading-relaxed">
+                  Basado en tu gasto promedio de <span className="text-amber-400">${averagePerDay.toFixed(2)}/día</span>, estima cuánto habrás gastado al finalizar los {daysInMonth} días del mes.
+                </div>
+              </div>
+              <p className="text-2xl font-black text-[#6366f1] tracking-tighter">
+                ${Math.round(projection).toLocaleString()}
+              </p>
+              <p className="text-[8px] font-bold text-secondary-400 uppercase mt-1 leading-tight max-w-[200px]">
+                Estimado mensual según tu ritmo actual de gasto diario.
+              </p>
+            </div>
+          </div>
 
-      {/* Proyección Inteligente */}
-      <Card className="bg-gradient-to-br from-info-50/50 to-transparent dark:from-info-950/20 border-info-100 dark:border-info-900/30">
-        <p className="text-[10px] font-black text-info-600 dark:text-info-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-          <Target size={12} /> Proyección Fin de Mes
-        </p>
-        <p className="text-4xl font-black text-info-600 tracking-tighter">
-          {formatCurrency(projection)}
-        </p>
-        <p className="text-[10px] text-info-500/70 mt-4 font-bold italic">
-          "A este ritmo, así terminarás tu mes"
-        </p>
-      </Card>
+          <div className="w-full sm:w-auto bg-[#f59e0b]/10 border border-[#f59e0b]/20 px-4 py-3 rounded-2xl flex sm:flex-col items-center sm:items-end justify-between gap-2">
+            <div className="flex items-center gap-2 text-[#f59e0b]">
+              <CalendarDays size={18} />
+              <span className="text-xl font-black leading-none">{daysRemaining}</span>
+            </div>
+            <p className="text-[8px] font-black uppercase text-secondary-500 tracking-tighter text-right leading-tight">
+              Días para <br className="hidden sm:block" /> fin de mes
+            </p>
+          </div>
+        </div>
 
-      {/* Comparativa vs Mes Anterior */}
-      <Card>
-        <p className="text-[10px] font-black text-secondary-400 uppercase tracking-widest mb-1">Vs. Mes Anterior</p>
-        <div className="flex items-center gap-2">
-          <p className={`text-4xl font-black tracking-tighter ${comparison < 0 ? 'text-success-600' : 'text-danger-600'}`}>
-            {comparison < 0 ? '-' : '+'}{Math.abs(comparison).toFixed(1)}%
-          </p>
-          {comparison < 0 ? <TrendingDown className="text-success-600" /> : <TrendingUp className="text-danger-600" />}
+        <div className={`pt-4 border-t border-secondary-50 dark:border-secondary-800 flex justify-between items-center ${diffAmount <= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+          <p className="text-[9px] font-black uppercase text-secondary-400">Vs mes anterior</p>
+          <div className="flex items-center gap-1 font-black text-sm">
+            {diffAmount <= 0 ? <TrendingDown size={16}/> : <TrendingUp size={16}/>}
+            {Math.abs(Math.round(diffPercent))}%
+          </div>
         </div>
-        <div className={`mt-4 text-[10px] font-bold px-3 py-1 rounded-full w-fit ${
-          comparison < 0 ? 'bg-success-100 text-success-700' : 'bg-danger-100 text-danger-700'
-        }`}>
-          {comparison < 0 ? 'AHORRANDO MÁS QUE AYER' : 'GASTANDO MÁS QUE AYER'}
-        </div>
-      </Card>
-    </div>
+
+      </div>
+    </Card>
   );
 };
 

@@ -56,18 +56,27 @@ function App() {
   const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // Listener de Firebase para persistencia de sesión real
+    // El listener de Firebase debe ser una suscripción limpia
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        // Guardamos el usuario en el store global
         setUser(firebaseUser);
       } else {
+        // Limpiamos el usuario si no hay sesión
         setUser(null);
-        setLoading(false);
       }
+      
+      // ✅ CORRECCIÓN CLAVE: Detener la carga SIEMPRE después de recibir respuesta de Firebase.
+      // Antes, si había usuario, el loading se quedaba en true infinitamente.
+      setLoading(false);
     });
 
+    // Limpieza al desmontar el componente
     return () => unsubscribe();
-  }, [setUser, setLoading]);
+    
+    // ✅ Dependencias vacías: Esto garantiza que el listener se cree UNA SOLA VEZ
+    // y no cause bucles infinitos de re-renderizado.
+  }, []); 
 
   return (
     <BrowserRouter>

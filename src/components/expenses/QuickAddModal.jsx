@@ -5,14 +5,14 @@ import { useAuthStore } from "../../stores/authStore";
 import { useCategoryStore } from "../../stores/categoryStore";
 import { SYSTEM_CATEGORIES, EMOTIONS, PURCHASE_TYPES } from "../../constants/categories";
 import { 
-  X, Check, Loader2, ChevronRight, Camera, MapPin, 
-  RefreshCw, Tag, Clock, Repeat, CreditCard, Wallet, Landmark, HelpCircle,
+  X, Check, ChevronRight, Camera, MapPin, 
+  Tag, Clock, Repeat, CreditCard, Wallet, Landmark, HelpCircle,
   Utensils, Car, Home, Film, Pill, Book, Shirt, Coffee, ShoppingBag, 
   Dumbbell, Plane, Gift, Heart, Star, Zap, Music, Wrench, Camera as CameraIcon
 } from "lucide-react";
 import Button from "../common/Button";
 
-// Mapeo para recuperación segura de iconos
+// Mapeo para recuperación segura de iconos de Lucide
 const ICON_MAP = {
   Utensils, Car, Home, Film, Pill, Book, Shirt, Coffee, ShoppingBag, 
   Dumbbell, Plane, Gift, Heart, Star, Zap, Music, Camera: CameraIcon, Wrench, HelpCircle
@@ -29,12 +29,7 @@ const RECURRENCE_TYPES = ["diaria", "semanal", "quincenal", "mensual", "anual"];
 
 const toLocalDateTimeString = (date) => {
   const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 const QuickAddModal = () => {
@@ -47,6 +42,7 @@ const QuickAddModal = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const amountRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
     amount: "", categoryId: "", subcategoryId: "", description: "",
@@ -83,6 +79,28 @@ const QuickAddModal = () => {
     }
   }, [isQuickAddModalOpen, editingExpense]);
 
+  // Función para obtener GPS
+  const handleGetLocation = () => {
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm({ ...form, location: { lat: pos.coords.latitude, lng: pos.coords.longitude } });
+        setIsLocating(false);
+      },
+      () => setIsLocating(false)
+    );
+  };
+
+  // Función para subir Ticket
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setIsUploading(true);
+    const url = await uploadTicket(file);
+    setForm({ ...form, imageUrl: url });
+    setIsUploading(false);
+  };
+
   const handleSave = async () => {
     if (!form.amount || !form.categoryId || isSaving || isUploading) return;
     const category = allCategories.find(c => c.id === form.categoryId);
@@ -110,13 +128,18 @@ const QuickAddModal = () => {
       <div className="w-full sm:max-w-xl bg-white dark:bg-secondary-900 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl max-h-[90vh] overflow-y-auto">
         
         <div className="sticky top-0 z-20 bg-white dark:bg-secondary-900 p-5 border-b flex justify-between items-center">
-          <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">{editingExpense ? 'Modo Edición' : `Paso ${step} de 3`}</span>
-          <button onClick={closeQuickAddModal} className="p-2 bg-secondary-100 dark:bg-secondary-800 rounded-full"><X size={18} /></button>
+          <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">
+            {editingExpense ? 'Editar Gasto' : `Nuevo Gasto • Paso ${step} de 3`}
+          </span>
+          <button onClick={closeQuickAddModal} className="p-2 bg-secondary-100 dark:bg-secondary-800 rounded-full active:scale-90 transition-transform">
+            <X size={18} />
+          </button>
         </div>
 
         <div className="p-6 space-y-8">
           {step === 1 && (
-            <div className="animate-in fade-in space-y-6">
+            <div className="animate-in fade-in space-y-8">
+              {/* MONTO */}
               <div className="text-center">
                 <div className="flex justify-center items-center text-7xl font-black text-amber-500 tracking-tighter">
                   <span className="text-3xl mr-2 opacity-30">$</span>
@@ -124,6 +147,7 @@ const QuickAddModal = () => {
                 </div>
               </div>
 
+              {/* CATEGORÍAS UNIFICADAS */}
               <div className="grid grid-cols-4 gap-3">
                 {allCategories.map((c) => {
                   let IconNode = null;
@@ -165,10 +189,13 @@ const QuickAddModal = () => {
           {step === 2 && (
             <div className="animate-in slide-in-from-right space-y-6">
               <div className="space-y-4">
+                {/* FECHA Y HORA */}
                 <div className="flex items-center gap-3 p-4 bg-secondary-50 dark:bg-secondary-800 rounded-2xl">
                   <Clock className="text-indigo-500" size={20} />
                   <input type="datetime-local" className="bg-transparent font-black w-full outline-none text-secondary-900 dark:text-white text-sm" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
                 </div>
+
+                {/* MÉTODO DE PAGO */}
                 <div className="grid grid-cols-4 gap-2">
                   {PAYMENT_METHODS.map(m => (
                     <button key={m.id} onClick={() => setForm({...form, paymentMethod: m.id})} className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${form.paymentMethod === m.id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-secondary-50 dark:bg-secondary-800 text-secondary-500'}`}>
@@ -176,10 +203,12 @@ const QuickAddModal = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* RECURRENCIA */}
                 <div className="flex items-center gap-3 p-4 bg-secondary-50 dark:bg-secondary-800 rounded-2xl">
                   <Repeat className={form.isRecurring ? "text-indigo-600 animate-spin-slow" : "text-secondary-400"} size={20} />
                   <div className="flex-1 flex justify-between items-center">
-                    <span className="text-xs font-black uppercase">¿Recurrente?</span>
+                    <span className="text-xs font-black uppercase">¿Gasto Recurrente?</span>
                     <button onClick={() => setForm(f => ({...f, isRecurring: !f.isRecurring}))} className={`w-12 h-6 rounded-full relative transition-colors ${form.isRecurring ? 'bg-indigo-600' : 'bg-secondary-300'}`}>
                       <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${form.isRecurring ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -192,38 +221,87 @@ const QuickAddModal = () => {
                     ))}
                   </div>
                 )}
+
+                {/* GPS Y TICKET */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={handleGetLocation} disabled={isLocating} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.location ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-secondary-50 text-secondary-500'}`}>
+                    <MapPin size={16} /> {isLocating ? 'Ubicando...' : form.location ? 'Ubicado' : 'GPS'}
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.imageUrl ? 'bg-purple-50 text-purple-600 border border-purple-200' : 'bg-secondary-50 text-secondary-500'}`}>
+                    <CameraIcon size={16} /> {isUploading ? 'Subiendo...' : form.imageUrl ? 'Listo' : 'Ticket'}
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                </div>
+
+                {/* TAGS */}
                 <div className="flex items-center gap-3 p-4 bg-secondary-50 dark:bg-secondary-800 rounded-2xl">
                   <Tag className="text-indigo-500" size={20} />
                   <input type="text" placeholder="Tags (separados por coma)" className="bg-transparent font-bold w-full outline-none text-xs" value={form.tags} onChange={(e) => setForm({...form, tags: e.target.value})} />
                 </div>
               </div>
-              <div className="flex gap-3">
+
+              <div className="flex gap-3 pt-4">
                 <Button variant="secondary" className="flex-1 py-4 font-black" onClick={() => setStep(1)}>ATRÁS</Button>
-                <Button variant="primary" className="flex-1 py-4 bg-indigo-600 font-black" onClick={() => setStep(3)}>CONTINUAR</Button>
+                <Button variant="primary" className="flex-1 py-4 bg-indigo-600 font-black" onClick={() => setStep(3)}>PSICOLOGÍA</Button>
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="animate-in slide-in-from-right space-y-8">
+              {/* ✅ ANÁLISIS PSICOLÓGICO: TIPO DE COMPRA */}
               <div className="space-y-4">
-                <p className="text-center text-[10px] font-black uppercase text-secondary-400 tracking-widest">¿Cómo te sentías?</p>
+                <p className="text-center text-[10px] font-black uppercase text-secondary-400 tracking-widest">¿Por qué compraste esto?</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {PURCHASE_TYPES.map(type => (
+                    <button 
+                      key={type.id} 
+                      onClick={() => setForm({ ...form, purchaseType: type.id })} 
+                      className={`py-4 rounded-2xl transition-all border-2 font-black text-[9px] uppercase ${
+                        form.purchaseType === type.id 
+                        ? "border-[#f59e0b] bg-[#f59e0b]/10 text-[#f59e0b]" 
+                        : "border-transparent bg-secondary-50 dark:bg-secondary-800 text-secondary-400"
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ✅ ANÁLISIS PSICOLÓGICO: EMOCIÓN */}
+              <div className="space-y-4">
+                <p className="text-center text-[10px] font-black uppercase text-secondary-400 tracking-widest">¿Cómo te sentías al pagar?</p>
                 <div className="flex justify-between px-2">
                   {EMOTIONS.map(emo => {
                     const EmoIcon = emo.icon;
                     return (
-                      <button key={emo.id} onClick={() => setForm({ ...form, emotion: emo.id })} className={`flex flex-col items-center gap-2 transition-all ${form.emotion === emo.id ? "scale-125 opacity-100" : "opacity-30 grayscale hover:opacity-100"}`}>
-                        <EmoIcon size={32} style={{ color: emo.color }} /><span className="text-[8px] font-black uppercase mt-1">{emo.label}</span>
+                      <button 
+                        key={emo.id} 
+                        onClick={() => setForm({ ...form, emotion: emo.id })} 
+                        className={`flex flex-col items-center gap-2 transition-all ${
+                          form.emotion === emo.id ? "scale-125 opacity-100" : "opacity-30 grayscale hover:opacity-100"
+                        }`}
+                      >
+                        <EmoIcon size={32} style={{ color: emo.color }} />
+                        <span className="text-[8px] font-black uppercase mt-1">{emo.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
-              <textarea placeholder="Descripción / Nota..." className="w-full p-4 rounded-2xl bg-secondary-100 dark:bg-secondary-800 font-bold text-xs h-24 border-none focus:ring-2 focus:ring-indigo-500" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
+              <textarea placeholder="Descripción opcional o notas..." className="w-full p-4 rounded-2xl bg-secondary-100 dark:bg-secondary-800 font-bold text-xs h-24 border-none focus:ring-2 focus:ring-indigo-500 shadow-inner" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
               <div className="flex gap-3">
                  <Button variant="secondary" className="flex-1 py-5 font-black" onClick={() => setStep(2)}>ATRÁS</Button>
-                 <Button variant="primary" className="flex-[2] py-5 bg-indigo-600 text-white font-black shadow-2xl" onClick={handleSave} loading={isSaving}>
-                    <Check className="mr-2" /> {editingExpense ? 'ACTUALIZAR' : 'GUARDAR'}
+                 <Button 
+                   variant="primary" 
+                   className="flex-[2] py-5 bg-[#6366f1] text-white font-black shadow-2xl" 
+                   onClick={handleSave} 
+                   loading={isSaving || isUploading}
+                 >
+                    <Check className="mr-2" /> {editingExpense ? 'ACTUALIZAR GASTO' : 'CONFIRMAR GASTO'}
                  </Button>
               </div>
             </div>

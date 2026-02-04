@@ -1,53 +1,63 @@
-import React from 'react';
-import Card from '../common/Card';
+import React, { useMemo } from "react";
+import Card from "../common/Card";
+import { SYSTEM_CATEGORIES } from "../../constants/categories";
 
-const TopCategories = ({ categories = [], currency = 'MXN' }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
+const TopCategories = ({ currentExpenses }) => {
+  const topData = useMemo(() => {
+    const categoriesMap = {};
+    let totalMonth = 0;
 
-  if (categories.length === 0) {
-    return (
-      <Card title="Top 5 Categorías del Mes">
-        <div className="text-center py-8 text-secondary-500">
-          No hay gastos registrados aún
-        </div>
-      </Card>
-    );
-  }
+    currentExpenses.forEach(e => {
+      const amount = Number(e.amount);
+      totalMonth += amount;
+      if (!categoriesMap[e.categoryId]) {
+        categoriesMap[e.categoryId] = {
+          id: e.categoryId,
+          name: e.categoryName,
+          amount: 0,
+          color: SYSTEM_CATEGORIES.find(c => c.id === e.categoryId)?.color || "#94a3b8"
+        };
+      }
+      categoriesMap[e.categoryId].amount += amount;
+    });
+
+    return Object.values(categoriesMap)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5)
+      .map(c => ({
+        ...c,
+        percent: totalMonth > 0 ? (c.amount / totalMonth) * 100 : 0
+      }));
+  }, [currentExpenses]);
 
   return (
-    <Card title="Top 5 Categorías del Mes">
-      <div className="space-y-4">
-        {categories.map((category) => (
-          <div key={category.id} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{category.icon}</span>
-                <span className="font-medium text-secondary-900 dark:text-white">
-                  {category.name}
+    <Card title="Top Categorías" className="p-6 bg-white dark:bg-secondary-900 border-none shadow-xl rounded-[2.5rem]">
+      <div className="space-y-5 mt-4">
+        {topData.length > 0 ? topData.map((cat) => (
+          <div key={cat.id} className="space-y-1.5">
+            <div className="flex justify-between items-end">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                <span className="text-[10px] font-black uppercase text-secondary-700 dark:text-secondary-200 tracking-tight">
+                  {cat.name}
                 </span>
               </div>
-              <div className="text-right">
-                <p className="font-bold text-secondary-900 dark:text-white">
-                  {formatCurrency(category.total)}
-                </p>
-                <p className="text-xs text-secondary-500">
-                  {category.percentage.toFixed(1)}%
-                </p>
-              </div>
+              <span className="text-[10px] font-black text-secondary-900 dark:text-white">
+                ${cat.amount.toLocaleString()} <span className="text-secondary-400 ml-1">({Math.round(cat.percent)}%)</span>
+              </span>
             </div>
-            <div className="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-2">
-              <div
-                className="bg-primary-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${category.percentage}%` }}
+            <div className="w-full h-1.5 bg-secondary-50 dark:bg-secondary-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full transition-all duration-1000 ease-out"
+                style={{ width: `${cat.percent}%`, backgroundColor: cat.color }}
               />
             </div>
           </div>
-        ))}
+        )) : (
+          <p className="text-center py-10 text-[10px] font-black text-secondary-400 uppercase tracking-widest">
+            Sin datos suficientes
+          </p>
+        )}
       </div>
     </Card>
   );

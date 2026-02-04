@@ -1,7 +1,19 @@
+import React, { useMemo } from "react";
 import Card from "../common/Card";
 import Button from "../common/Button";
 import { SYSTEM_CATEGORIES } from "../../constants/categories";
-import { Wallet, CreditCard, Landmark, HelpCircle, DollarSign } from "lucide-react";
+import { useCategoryStore } from "../../stores/categoryStore"; // ✅ Importar store
+import { 
+  Wallet, CreditCard, Landmark, HelpCircle, DollarSign,
+  Utensils, Car, Home, Film, Pill, Book, Shirt, Coffee, ShoppingBag, 
+  Dumbbell, Plane, Gift, Heart, Star, Zap, Music, Camera, Wrench 
+} from "lucide-react";
+
+// Biblioteca de iconos para categorías personalizadas
+const ICON_MAP = {
+  Utensils, Car, Home, Film, Pill, Book, Shirt, Coffee, ShoppingBag, 
+  Dumbbell, Plane, Gift, Heart, Star, Zap, Music, Camera, Wrench, HelpCircle
+};
 
 const PAYMENT_METHODS = [
   { id: "all", label: "Todos", icon: DollarSign },
@@ -20,6 +32,22 @@ const SORT_OPTIONS = [
 ];
 
 export default function ExpenseFilters({ filters, onChange }) {
+  const { customCategories, hiddenSystemIds } = useCategoryStore();
+
+  // ✅ UNIFICACIÓN DE CATEGORÍAS PARA EL FILTRO
+  const allAvailableCategories = useMemo(() => {
+    // 1. Filtrar las de sistema que no estén ocultas
+    const visibleSystem = SYSTEM_CATEGORIES.filter(cat => !hiddenSystemIds.includes(cat.id));
+    
+    // 2. Mapear las personalizadas
+    const formattedCustom = customCategories.map(cat => ({
+      ...cat,
+      isCustom: true
+    }));
+
+    return [...visibleSystem, ...formattedCustom];
+  }, [customCategories, hiddenSystemIds]);
+
   const toggleCategory = (id) => {
     const next = filters.categories.includes(id)
       ? filters.categories.filter(c => c !== id)
@@ -75,20 +103,29 @@ export default function ExpenseFilters({ filters, onChange }) {
                   filters.range === r ? "bg-indigo-600 text-white shadow-lg" : "bg-secondary-100 dark:bg-secondary-800 text-secondary-500"
                 }`}
               >
-                {r === 'today' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : 'Año'}
+                {r === 'today' ? 'Hoy' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : r === 'year' ? 'Año' : r}
               </button>
             ))}
           </div>
         </div>
 
-        {/* CATEGORÍAS */}
+        {/* CATEGORÍAS UNIFICADAS */}
         <div>
           <p className="text-[9px] font-black uppercase mb-2 text-secondary-500 tracking-widest">Categorías</p>
-          <div className="grid grid-cols-4 gap-2">
-            {SYSTEM_CATEGORIES.map(cat => {
-              const Icon = cat.icon;
+          <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+            {allAvailableCategories.map(cat => {
               const isActive = filters.categories.includes(cat.id);
               
+              // Lógica de icono idéntica al modal para evitar errores
+              let IconNode = null;
+              if (cat.isCustom) {
+                const CustomIcon = ICON_MAP[cat.iconName] || HelpCircle;
+                IconNode = <CustomIcon size={16} />;
+              } else {
+                const SystemIcon = cat.icon;
+                IconNode = <SystemIcon size={16} />;
+              }
+
               return (
                 <button
                   key={cat.id}
@@ -99,7 +136,9 @@ export default function ExpenseFilters({ filters, onChange }) {
                       : "bg-secondary-50 dark:bg-secondary-800 text-secondary-400"
                   }`}
                 >
-                  <Icon size={16} />
+                  <div style={{ color: isActive ? 'white' : cat.color }}>
+                    {IconNode}
+                  </div>
                   <span className="truncate w-full text-center leading-tight">{cat.label}</span>
                 </button>
               );
@@ -144,7 +183,7 @@ export default function ExpenseFilters({ filters, onChange }) {
                 placeholder="Min"
                 value={filters.minAmount}
                 onChange={(e) => handleMinAmountChange(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 rounded-xl bg-secondary-50 dark:bg-secondary-800 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-7 pr-3 py-2 rounded-xl bg-secondary-50 dark:bg-secondary-800 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-secondary-900 dark:text-white"
               />
             </div>
             <div className="relative">
@@ -154,7 +193,7 @@ export default function ExpenseFilters({ filters, onChange }) {
                 placeholder="Max"
                 value={filters.maxAmount}
                 onChange={(e) => handleMaxAmountChange(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 rounded-xl bg-secondary-50 dark:bg-secondary-800 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-7 pr-3 py-2 rounded-xl bg-secondary-50 dark:bg-secondary-800 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500 text-secondary-900 dark:text-white"
               />
             </div>
           </div>

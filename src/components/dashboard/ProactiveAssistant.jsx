@@ -1,66 +1,67 @@
-import React, { useMemo } from 'react';
-import Card from '../common/Card';
-import { useExpenseStore } from '../../stores/expenseStore';
-import { Lightbulb, AlertTriangle, PartyPopper, Zap } from 'lucide-react';
+import React from "react";
+import Card from "../common/Card";
+import { Sparkles, ArrowRight, BrainCircuit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const ProactiveAssistant = () => {
-  const { expenses } = useExpenseStore();
+const ProactiveAssistant = ({ spent, budget }) => {
+  const navigate = useNavigate();
+  const hour = new Date().getHours();
+  
+  const getGreeting = () => {
+    if (hour < 12) return "¡Buen día!";
+    if (hour < 18) return "¡Buena tarde!";
+    return "¡Buena noche!";
+  };
 
-  const insight = useMemo(() => {
-    if (expenses.length === 0) return null;
-
-    // Aseguramos orden descendente por fecha
-    const sortedExpenses = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-    const now = new Date();
-    const lastExpenseDate = new Date(sortedExpenses[0].date);
-    const diffDays = Math.floor((now - lastExpenseDate) / (1000 * 60 * 60 * 24));
-
-    // REQUERIMIENTO 13.4: Asistente Proactivo
-    if (diffDays >= 3) {
-      return {
-        text: `Detective: Llevas ${diffDays} días sin registrar actividad. ¡Mantén el hábito!`,
-        icon: <AlertTriangle className="text-warning-500" />,
-        type: "warning",
-        bg: "bg-warning-50 dark:bg-warning-900/20"
-      };
-    }
-
-    // REQUERIMIENTO 13.3: Detective Financiero (Detección de impulsos)
-    const recentImpulses = expenses.filter(e => e.isImpulse && 
-      (now - new Date(e.date)) < (7 * 24 * 60 * 60 * 1000)).length;
-
-    if (recentImpulses > 3) {
-      return {
-        text: `Has tenido ${recentImpulses} gastos por impulso esta semana. ¿Probamos el modo Ahorro Extremo?`,
-        icon: <Zap className="text-primary-500" />,
-        type: "info",
-        bg: "bg-primary-50 dark:bg-primary-900/20"
-      };
-    }
-
-    return {
-      text: "Tu salud financiera es sólida. Estás gastando un 10% menos que tu promedio.",
-      icon: <PartyPopper className="text-success-500" />,
-      type: "success",
-      bg: "bg-success-50 dark:bg-success-900/20"
-    };
-  }, [expenses]);
-
-  if (!insight) return null;
+  const percent = budget > 0 ? (spent / budget) * 100 : 0;
+  
+  const getAdvice = () => {
+    if (spent === 0) return "Aún no tienes gastos registrados este mes. Es un excelente inicio para ahorrar.";
+    if (percent > 90) return "Cuidado, has agotado casi todo tu presupuesto. Evita gastos innecesarios hoy.";
+    return "Tu ritmo de gasto es saludable. Tienes margen para tus metas financieras.";
+  };
 
   return (
-    <Card className={`border-none ${insight.bg} transition-all duration-500`}>
-      <div className="flex items-center gap-4">
-        <div className="p-2 bg-white dark:bg-secondary-800 rounded-xl shadow-sm">
-          {insight.icon}
-        </div>
-        <div className="flex-1">
-          <p className="text-xs font-black uppercase text-secondary-400 mb-1 tracking-widest">
-            Asistente Proactivo
+    <Card 
+      className="p-0 overflow-hidden border-none shadow-xl rounded-[2.5rem]"
+      style={{ backgroundColor: '#f59e0b' }} // AMARILLO SÓLIDO
+    >
+      <div className="p-8 relative">
+        <BrainCircuit 
+          className="absolute -right-4 -top-4 text-[#1e1b4b]" 
+          style={{ opacity: 0.05 }} 
+          size={140} 
+        />
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(30, 27, 75, 0.1)' }}>
+              <Sparkles size={18} style={{ color: '#1e1b4b' }} />
+            </div>
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1e1b4b]">
+              Asistente Inteligente
+            </span>
+          </div>
+
+          <h3 className="text-2xl font-black uppercase tracking-tighter mb-3 text-[#1e1b4b]">
+            {getGreeting()}, Álvaro
+          </h3>
+          
+          <p className="text-[14px] font-bold leading-relaxed mb-8 max-w-[85%] text-[#1e1b4b]/80">
+            "{getAdvice()}"
           </p>
-          <p className="text-sm font-bold text-secondary-900 dark:text-white leading-tight italic">
-            "{insight.text}"
-          </p>
+
+          {/* ✅ Ruta corregida a /analytics para coincidir con App.jsx */}
+          <button 
+            onClick={() => navigate('/analytics')} 
+            className="flex items-center gap-3 px-8 py-4 rounded-2xl text-[11px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-lg text-white"
+            style={{ 
+                backgroundColor: '#6366f1', // MORADO SÓLIDO
+            }}
+          >
+            Ver análisis profundo
+            <ArrowRight size={16} />
+          </button>
         </div>
       </div>
     </Card>

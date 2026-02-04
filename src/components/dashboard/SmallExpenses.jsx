@@ -1,46 +1,62 @@
-import React from 'react';
-import Card from '../common/Card';
-import { Coffee, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import Card from "../common/Card";
+import { Bug, ArrowUpRight } from "lucide-react"; // Importamos el icono Bug
+import SmallExpensesModal from "./SmallExpensesModal";
 
-const SmallExpenses = ({ amount = 0, currency = 'MXN' }) => {
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('es-MX', {
-      style: 'currency',
-      currency: currency,
-    }).format(value);
-  };
-
-  if (amount === 0) return null;
-
-  // Cálculo de proyección anual para impacto psicológico
-  const annualProjection = amount * 12;
+const SmallExpenses = ({ expenses }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Filtrar gastos menores a 50
+  const smallOnes = expenses.filter(e => {
+      const amt = Number(e.amount);
+      return amt > 0 && amt < 50;
+  });
+  
+  const totalHormiga = smallOnes.reduce((sum, e) => sum + Number(e.amount), 0);
 
   return (
-    <Card className="border-l-4 border-l-amber-500">
-      <div className="flex flex-col sm:flex-row items-center gap-6">
-        <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-[1.5rem] flex items-center justify-center text-3xl shadow-inner">
-          🐜
-        </div>
-        <div className="flex-1 text-center sm:text-left">
-          <h3 className="text-lg font-black text-secondary-900 dark:text-white uppercase tracking-tight flex items-center justify-center sm:justify-start gap-2">
-            Gastos Hormiga <Coffee size={18} className="text-amber-600" />
-          </h3>
-          <p className="text-sm text-secondary-500 font-medium">
-            Pequeños consumos menores a $50 que acumulaste este mes.
-          </p>
-          <div className="mt-3 flex items-center gap-2 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-xl w-fit mx-auto sm:mx-0">
-            <AlertCircle size={14} /> 
-            PROYECCIÓN ANUAL: {formatCurrency(annualProjection)}
+    <>
+      <div 
+        onClick={() => setIsModalOpen(true)}
+        className="h-full w-full cursor-pointer group"
+      >
+        <Card 
+          className="p-6 bg-[#f59e0b] border-none shadow-lg rounded-[2.5rem] relative overflow-hidden h-full transition-all duration-300 group-hover:scale-[1.02] group-active:scale-95"
+        >
+          <div className="relative z-10">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-white/30 rounded-xl text-[#1e1b4b]">
+                <Bug size={18} />
+              </div>
+              <ArrowUpRight size={18} className="text-[#1e1b4b] opacity-40 group-hover:opacity-100 transition-opacity" />
+            </div>
+            
+            <p className="text-[10px] font-black uppercase text-[#1e1b4b] tracking-widest mb-1">Gasto Hormiga</p>
+            <p className="text-4xl font-black text-[#1e1b4b] tracking-tighter">
+              ${totalHormiga.toLocaleString()}
+            </p>
+            
+            <div className="mt-4 flex items-center gap-2">
+                <span className="text-[8px] font-black bg-[#1e1b4b]/10 text-[#1e1b4b] px-2 py-1 rounded-lg uppercase">
+                    {smallOnes.length} movimientos
+                </span>
+                <p className="text-[8px] font-bold text-[#1e1b4b]/60 uppercase">Ver detalle</p>
+            </div>
           </div>
-        </div>
-        <div className="text-center sm:text-right bg-secondary-50 dark:bg-secondary-800 p-4 rounded-2xl min-w-[120px]">
-          <p className="text-[10px] font-black text-secondary-400 uppercase mb-1">Total Mes</p>
-          <p className="text-3xl font-black text-amber-600 tracking-tighter">
-            {formatCurrency(amount)}
-          </p>
-        </div>
+          
+          <Bug className="absolute -bottom-6 -right-6 text-white/10 rotate-12" size={120} />
+        </Card>
       </div>
-    </Card>
+
+      {/* MODAL: Aquí pasamos el icono Bug para que no salga el "?" */}
+      <SmallExpensesModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        expenses={smallOnes}
+        customTitle="Gastos Hormiga"
+        icon={Bug} 
+      />
+    </>
   );
 };
 

@@ -1,73 +1,49 @@
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import Card from '../common/Card';
+import React, { useMemo } from "react";
+import Card from "../common/Card";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const FinancialRiver = ({ data = [] }) => {
-  // data debe venir formateada: { day: '01', income: 500, expenses: 200 }
-  if (data.length === 0) {
-    return (
-      <Card title="Río Financiero">
-        <div className="h-48 flex items-center justify-center text-secondary-400 text-sm italic font-medium">
-          Aún no hay suficiente caudal de datos...
-        </div>
-      </Card>
-    );
-  }
+const FinancialRiver = ({ expenses }) => {
+  const chartData = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const data = [];
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      data.push({ day: i, label: `${i}`, gastos: 0, ingresos: 0 });
+    }
+
+    expenses.forEach((e) => {
+      const d = e.date?.toDate ? e.date.toDate() : new Date(e.date);
+      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+        const dayIdx = d.getDate() - 1;
+        if (data[dayIdx]) data[dayIdx].gastos += Number(e.amount || 0);
+      }
+    });
+
+    // NOTA: Los ingresos se mantendrán en 0 hasta que conectemos el store de Ingresos real
+    return data;
+  }, [expenses]);
 
   return (
-    <Card title="Río Financiero (Ingresos vs Gastos)">
-      <div className="h-64 w-full mt-4">
+    <Card className="p-6 bg-white dark:bg-secondary-900 border-none shadow-xl rounded-[2.5rem]">
+      <header className="mb-6">
+        <p className="text-[10px] font-black uppercase text-secondary-400 tracking-[0.2em] mb-1">Flujo de Caja</p>
+        <h3 className="text-sm font-black text-secondary-900 dark:text-white uppercase">Gastos vs Ingresos Reales</h3>
+      </header>
+
+      <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-            <XAxis 
-              dataKey="day" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{fontSize: 10, fill: '#94a3b8'}}
-            />
-            <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
-            <Tooltip 
-              contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-            />
-            <Area 
-              type="monotone" 
-              dataKey="income" 
-              stroke="#10b981" 
-              strokeWidth={3}
-              fillOpacity={1} 
-              fill="url(#colorIncome)" 
-            />
-            <Area 
-              type="monotone" 
-              dataKey="expenses" 
-              stroke="#ef4444" 
-              strokeWidth={3}
-              fillOpacity={1} 
-              fill="url(#colorExpenses)" 
-            />
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '900'}} interval={4} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10, fontWeight: '900'}} />
+            <Tooltip contentStyle={{ borderRadius: '1.5rem', border: 'none', fontWeight: '900', textTransform: 'uppercase' }} />
+            
+            {/* Solo colores sólidos (Morado para Gastos, Amarillo para Ingresos) */}
+            <Area type="monotone" dataKey="ingresos" stroke="#f59e0b" strokeWidth={3} fill="#f59e0b" fillOpacity={0.1} />
+            <Area type="monotone" dataKey="gastos" stroke="#6366f1" strokeWidth={3} fill="#6366f1" fillOpacity={0.1} />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
-      <div className="mt-4 flex justify-center gap-6 text-[10px] font-bold uppercase tracking-widest">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-success-500 rounded-full shadow-sm shadow-success-500/50"></div>
-          <span className="text-secondary-600 dark:text-secondary-400">Entradas</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-danger-500 rounded-full shadow-sm shadow-danger-500/50"></div>
-          <span className="text-secondary-600 dark:text-secondary-400">Salidas</span>
-        </div>
       </div>
     </Card>
   );
