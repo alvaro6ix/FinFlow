@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { 
-  collection, addDoc, updateDoc, deleteDoc, doc, 
-  query, where, onSnapshot, serverTimestamp 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  onSnapshot,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
@@ -11,88 +18,71 @@ export const useBudgetStore = create((set, get) => ({
   error: null,
   unsubscribe: null,
 
-  // Suscripción reactiva filtrando por usuario y estado activo
+  // Suscripción en tiempo real
   subscribeBudgets: (userId) => {
     if (!userId) return;
-    set({ loading: true, error: null });
+    set({ loading: true });
     
     if (get().unsubscribe) get().unsubscribe();
 
-    // Filtramos solo presupuestos activos para el dashboard y la vista de presupuestos
-    const q = query(
-      collection(db, 'budgets'), 
-      where('userId', '==', userId),
-      where('active', '==', true) 
-    );
-
+    const q = query(collection(db, 'budgets'), where('userId', '==', userId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const budgets = snapshot.docs.map(doc => ({
+      const budgetsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        spent: Number(doc.data().spent || 0),
+        amount: Number(doc.data().amount || 0),
+        isActive: doc.data().isActive ?? true
       }));
-      set({ budgets, loading: false });
+      set({ budgets: budgetsData, loading: false });
     }, (error) => {
-      console.error("Budget Subscription Error:", error);
       set({ error: error.message, loading: false });
     });
 
     set({ unsubscribe });
+    return unsubscribe;
   },
 
-  addBudget: async (budgetData) => {
-    set({ loading: true, error: null });
+  // CRUD Operaciones
+  createBudget: async (data) => {
     try {
-      // Verificación de integridad: Evitar duplicados para la misma categoría
-      const existing = get().budgets.find(b => b.categoryId === budgetData.categoryId);
-      if (existing) {
-        throw new Error(`Ya tienes un presupuesto asignado a esta categoría.`);
-      }
-
       await addDoc(collection(db, 'budgets'), {
-        ...budgetData,
+        ...data,
         createdAt: serverTimestamp(),
-        active: true
+        spent: 0
       });
-      set({ loading: false });
       return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
   },
 
   updateBudget: async (id, updates) => {
-    set({ loading: true, error: null });
     try {
-      await updateDoc(doc(db, 'budgets', id), { 
-        ...updates, 
-        updatedAt: serverTimestamp() 
-      });
-      set({ loading: false });
+      const ref = doc(db, 'budgets', id);
+      await updateDoc(ref, { ...updates, updatedAt: serverTimestamp() });
       return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
   },
 
-  // REQUERIMIENTO 12.3: Eliminación de presupuestos
   deleteBudget: async (id) => {
-    set({ loading: true, error: null });
     try {
       await deleteDoc(doc(db, 'budgets', id));
-      set({ loading: false });
       return { success: true };
-    } catch (error) {
-      set({ error: error.message, loading: false });
-      return { success: false, error: error.message };
+    } catch (e) {
+      return { success: false, error: e.message };
     }
   },
 
-  clearError: () => set({ error: null }),
-
-  clearBudgets: () => {
-    if (get().unsubscribe) get().unsubscribe();
-    set({ budgets: [], unsubscribe: null, error: null });
+  // Lógica 50/30/20 (5.4)
+  calculateSmartBudget: (income) => {
+    const val = Number(income) || 0;
+    return {
+      needs: val * 0.5,
+      wants: val * 0.3,
+      savings: val * 0.2
+    };
   }
 }));

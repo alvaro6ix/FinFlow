@@ -1,56 +1,129 @@
 import React from 'react';
-import Card from '../common/Card';
-import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
-const BudgetProgress = ({ budget, spent = 0, currency = 'MXN' }) => {
-  const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0;
-  const threshold = budget.alertThreshold || 80;
+const BudgetProgress = ({ spent, total, alertThreshold = 80, showLabels = true, size = 'md' }) => {
+  const percentage = total > 0 ? Math.min((spent / total) * 100, 100) : 0;
+  const overBudget = spent > total;
+  const overagePercentage = overBudget ? ((spent - total) / total) * 100 : 0;
 
-  const getStatus = () => {
-    if (percentage >= 100) return { color: 'bg-danger-500', text: 'EXCEDIDO', icon: <AlertCircle size={14} />, textColor: 'text-danger-600' };
-    if (percentage >= threshold) return { color: 'bg-warning-500', text: 'LIMITE CERCA', icon: <Info size={14} />, textColor: 'text-warning-600' };
-    return { color: 'bg-success-500', text: 'EN CONTROL', icon: <CheckCircle2 size={14} />, textColor: 'text-success-600' };
+  const getColor = () => {
+    if (percentage >= 100) return 'red';
+    if (percentage >= alertThreshold) return 'yellow';
+    return 'green';
   };
 
-  const status = getStatus();
+  const color = getColor();
+
+  const colorClasses = {
+    green: {
+      bg: 'bg-green-500',
+      light: 'bg-green-100',
+      text: 'text-green-700',
+      glow: 'shadow-green-500/50',
+    },
+    yellow: {
+      bg: 'bg-yellow-500',
+      light: 'bg-yellow-100',
+      text: 'text-yellow-700',
+      glow: 'shadow-yellow-500/50',
+    },
+    red: {
+      bg: 'bg-red-500',
+      light: 'bg-red-100',
+      text: 'text-red-700',
+      glow: 'shadow-red-500/50',
+    },
+  };
+
+  const sizeClasses = {
+    sm: 'h-2',
+    md: 'h-3',
+    lg: 'h-4',
+    xl: 'h-6',
+  };
+
+  const colors = colorClasses[color];
+  const heightClass = sizeClasses[size];
 
   return (
-    <Card className="relative overflow-hidden group">
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-4">
-          <div className="text-3xl p-3 bg-secondary-100 dark:bg-secondary-800 rounded-2xl group-hover:scale-110 transition-transform">
-            {budget.categoryIcon || '💰'}
+    <div className="w-full space-y-2">
+      {/* Progress Bar Container */}
+      <div className="relative">
+        {/* Background */}
+        <div className={`w-full ${heightClass} ${colors.light} rounded-full overflow-hidden`}>
+          {/* Progress Fill */}
+          <div
+            className={`${heightClass} ${colors.bg} rounded-full transition-all duration-500 ease-out relative ${colors.glow} shadow-lg`}
+            style={{
+              width: `${Math.min(percentage, 100)}%`,
+            }}
+          >
+            {/* Shine Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
           </div>
-          <div>
-            <h4 className="font-black text-secondary-900 dark:text-white uppercase tracking-tight text-sm">
-              {budget.categoryLabel}
-            </h4>
-            <div className={`flex items-center gap-1 text-[10px] font-black uppercase ${status.textColor}`}>
-              {status.icon} {status.text}
+
+          {/* Alert Threshold Marker */}
+          {alertThreshold < 100 && (
+            <div
+              className="absolute top-0 bottom-0 w-0.5 bg-gray-400/50"
+              style={{
+                left: `${alertThreshold}%`,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Overage Indicator (if exceeded) */}
+        {overBudget && (
+          <div className="absolute -right-1 top-1/2 -translate-y-1/2">
+            <div className="relative">
+              <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+              <div className="absolute inset-0 w-3 h-3 bg-red-600 rounded-full animate-ping opacity-75" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Labels */}
+      {showLabels && (
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <span className={`font-semibold ${colors.text}`}>
+              {percentage.toFixed(1)}%
+            </span>
+            {overBudget && (
+              <span className="text-red-600 text-xs font-medium">
+                (+{overagePercentage.toFixed(1)}% excedido)
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-4 text-xs text-gray-600">
+            {alertThreshold < 100 && (
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                <span>Alerta: {alertThreshold}%</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <div className={`w-2 h-2 ${colors.bg} rounded-full`} />
+              <span>Usado</span>
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-3xl font-black tracking-tighter text-secondary-900 dark:text-white">
-            {percentage.toFixed(0)}%
-          </p>
-        </div>
-      </div>
+      )}
 
-      {/* Barra de Progreso */}
-      <div className="space-y-2">
-        <div className="w-full bg-secondary-100 dark:bg-secondary-800 h-3 rounded-full overflow-hidden shadow-inner">
-          <div
-            className={`h-full transition-all duration-1000 ease-out ${status.color}`}
-            style={{ width: `${Math.min(percentage, 100)}%` }}
-          />
+      {/* Additional Info */}
+      {showLabels && (
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>
+            ${spent.toLocaleString('es-MX', { minimumFractionDigits: 2 })} gastado
+          </span>
+          <span>
+            de ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+          </span>
         </div>
-        <div className="flex justify-between text-[10px] font-black text-secondary-400 uppercase tracking-widest">
-          <span>Gastado: ${spent.toLocaleString()}</span>
-          <span>Límite: ${budget.amount.toLocaleString()}</span>
-        </div>
-      </div>
-    </Card>
+      )}
+    </div>
   );
 };
 
