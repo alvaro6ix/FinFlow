@@ -13,7 +13,7 @@ import { auth, googleProvider, storage } from '../firebase/config';
 
 export const useAuthStore = create((set) => ({
   user: null,
-  loading: false,
+  loading: true,
   error: null,
   currency: localStorage.getItem('ff_currency') || 'MXN',
   language: localStorage.getItem('ff_language') || 'es',

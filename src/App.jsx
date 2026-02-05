@@ -67,15 +67,11 @@ function App() {
       }
       
       // ✅ CORRECCIÓN CLAVE: Detener la carga SIEMPRE después de recibir respuesta de Firebase.
-      // Antes, si había usuario, el loading se quedaba en true infinitamente.
       setLoading(false);
     });
 
     // Limpieza al desmontar el componente
     return () => unsubscribe();
-    
-    // ✅ Dependencias vacías: Esto garantiza que el listener se cree UNA SOLA VEZ
-    // y no cause bucles infinitos de re-renderizado.
   }, []); 
 
   return (
@@ -108,7 +104,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="expenses" element={<Expenses />} />
           <Route path="budgets" element={<Budgets />} />
