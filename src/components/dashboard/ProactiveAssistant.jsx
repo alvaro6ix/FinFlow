@@ -1,6 +1,5 @@
 import React from "react";
-import Card from "../common/Card";
-import { Sparkles, ArrowRight, BrainCircuit } from "lucide-react";
+import { Sparkles, BrainCircuit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ProactiveAssistant = ({ spent, budget }) => {
@@ -17,54 +16,47 @@ const ProactiveAssistant = ({ spent, budget }) => {
   
   const getAdvice = () => {
     if (spent === 0) return "Aún no tienes gastos registrados este mes. Es un excelente inicio para ahorrar.";
-    if (percent > 90) return "Cuidado, has agotado casi todo tu presupuesto. Evita gastos innecesarios hoy.";
-    return "Tu ritmo de gasto es saludable. Tienes margen para tus metas financieras.";
+    if (percent > 90) return "Atención: has agotado casi todo tu presupuesto. Evita gastos hormiga hoy.";
+    return "Tu ritmo de gasto es saludable. Tienes margen para tus metas.";
   };
 
   return (
-    <Card 
-      className="p-0 overflow-hidden border-none shadow-xl rounded-[2.5rem]"
-      style={{ backgroundColor: '#f59e0b' }} // AMARILLO SÓLIDO
-    >
-      <div className="p-8 relative">
+    <div className="relative overflow-hidden rounded-[2.5rem] shadow-2xl group cursor-default">
+      {/* Fondo Glass Amarillo */}
+      <div className="absolute inset-0 bg-[#FFD700] opacity-90 backdrop-blur-xl" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent" />
+      
+      <div className="relative z-10 p-8 sm:p-10">
         <BrainCircuit 
-          className="absolute -right-4 -top-4 text-[#1e1b4b]" 
-          style={{ opacity: 0.05 }} 
-          size={140} 
+          className="absolute -right-6 -top-6 text-[#1e1b4b] opacity-10 rotate-12 transition-transform group-hover:rotate-0 duration-700" 
+          size={180} 
         />
         
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(30, 27, 75, 0.1)' }}>
-              <Sparkles size={18} style={{ color: '#1e1b4b' }} />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#1e1b4b]">
-              Asistente Inteligente
-            </span>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 rounded-xl bg-[#1e1b4b]/10 backdrop-blur-sm">
+            <Sparkles size={16} className="text-[#1e1b4b]" />
           </div>
-
-          <h3 className="text-2xl font-black uppercase tracking-tighter mb-3 text-[#1e1b4b]">
-            {getGreeting()}, Álvaro
-          </h3>
-          
-          <p className="text-[14px] font-bold leading-relaxed mb-8 max-w-[85%] text-[#1e1b4b]/80">
-            "{getAdvice()}"
-          </p>
-
-          {/* ✅ Ruta corregida a /analytics para coincidir con App.jsx */}
-          <button 
-            onClick={() => navigate('/analytics')} 
-            className="flex items-center gap-3 px-8 py-4 rounded-2xl text-[11px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-lg text-white"
-            style={{ 
-                backgroundColor: '#6366f1', // MORADO SÓLIDO
-            }}
-          >
-            Ver análisis profundo
-            <ArrowRight size={16} />
-          </button>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1e1b4b]/70">
+            Asistente IA
+          </span>
         </div>
+
+        <h3 className="text-3xl font-black uppercase tracking-tighter mb-3 text-[#1e1b4b]">
+          {getGreeting()}
+        </h3>
+        
+        <p className="text-sm sm:text-base font-bold leading-relaxed mb-8 max-w-[90%] text-[#1e1b4b]/80">
+          "{getAdvice()}"
+        </p>
+
+        <button 
+          onClick={() => navigate('/analytics')} 
+          className="px-6 py-3 bg-[#1e1b4b] text-[#FFD700] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all hover:bg-black"
+        >
+          Ver Análisis Profundo
+        </button>
       </div>
-    </Card>
+    </div>
   );
 };
 

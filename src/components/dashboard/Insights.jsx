@@ -1,104 +1,76 @@
 import React, { useMemo } from "react";
-import { Sparkles, AlertTriangle, TrendingUp, CheckCircle2, Info } from "lucide-react";
+import { TrendingUp, CheckCircle2, AlertTriangle, PieChart } from "lucide-react";
+import { SYSTEM_CATEGORIES } from "../../constants/categories";
 
-const Insights = ({ currentExpenses, lastExpenses, budget = 20000 }) => {
-  const generatedInsights = useMemo(() => {
-    const insights = [];
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const currentDay = now.getDate();
-
+const Insights = ({ currentExpenses, lastExpenses }) => {
+  const insights = useMemo(() => {
+    const list = [];
     const totalCurrent = currentExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const totalLast = lastExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
-    // 1. Insight de Ahorro o Exceso General
+    // 1. INSIGHT DE TENDENCIA (Comparativa mes)
     if (totalCurrent > totalLast && totalLast > 0) {
       const diff = ((totalCurrent - totalLast) / totalLast) * 100;
-      insights.push({
-        id: 'trend',
-        type: 'warning',
+      list.push({
+        id: 'trend-bad',
         icon: TrendingUp,
-        text: `Gastas un ${Math.round(diff)}% más que el mes pasado.`,
+        text: `Estás gastando un ${Math.round(diff)}% más que el mes pasado.`,
         color: 'text-red-500',
-        bg: 'bg-red-50 dark:bg-red-900/10'
+        bg: 'bg-red-500/5 border-red-500/20'
       });
-    } else if (totalCurrent < totalLast && currentDay > 15) {
-      insights.push({
-        id: 'save',
-        type: 'success',
+    } else if (totalCurrent < totalLast && new Date().getDate() > 20) {
+      list.push({
+        id: 'trend-good',
         icon: CheckCircle2,
-        text: "¡Vas por buen camino! Estás gastando menos que el mes anterior.",
+        text: `Vas ganando: has reducido tus gastos respecto al mes anterior.`,
         color: 'text-emerald-500',
-        bg: 'bg-emerald-50 dark:bg-emerald-900/10'
+        bg: 'bg-emerald-500/5 border-emerald-500/20'
       });
     }
 
-    // 2. Insight de Proyección de Presupuesto
-    const projection = (totalCurrent / currentDay) * daysInMonth;
-    if (projection > budget && budget > 0) {
-      insights.push({
-        id: 'budget-alert',
-        type: 'danger',
-        icon: AlertTriangle,
-        text: `A este ritmo, superarás tu presupuesto por $${Math.round(projection - budget).toLocaleString()}.`,
-        color: 'text-amber-600',
-        bg: 'bg-amber-50 dark:bg-amber-900/10'
-      });
-    }
-
-    // 3. Insight de Categoría más pesada
+    // 2. INSIGHT DE CATEGORÍA DOMINANTE (Lo que pediste)
     if (currentExpenses.length > 0) {
-      const catTotals = currentExpenses.reduce((acc, e) => {
-        acc[e.categoryName] = (acc[e.categoryName] || 0) + Number(e.amount);
-        return acc;
-      }, {});
+      const catStats = {};
+      currentExpenses.forEach(e => {
+        catStats[e.categoryId] = (catStats[e.categoryId] || 0) + Number(e.amount);
+      });
       
-      const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-      const percent = (topCat[1] / totalCurrent) * 100;
+      const sortedCats = Object.entries(catStats).sort((a, b) => b[1] - a[1]);
+      const topCatId = sortedCats[0][0];
+      const topCatAmount = sortedCats[0][1];
+      const topCatPercent = (topCatAmount / totalCurrent) * 100;
       
-      if (percent > 40) {
-        insights.push({
-          id: 'category-heavy',
-          type: 'info',
-          icon: Sparkles,
-          text: `Tu gasto en "${topCat[0]}" representa el ${Math.round(percent)}% de tus salidas.`,
-          color: 'text-indigo-600',
-          bg: 'bg-indigo-50 dark:bg-indigo-900/10'
-        });
-      }
-    }
+      const categoryName = SYSTEM_CATEGORIES.find(c => c.id === topCatId)?.label || "Otros";
 
-    // 4. Insight de Gasto Hormiga (Sincronizado con SmallExpenses)
-    const totalHormiga = currentExpenses.filter(e => Number(e.amount) < 50).reduce((sum, e) => sum + Number(e.amount), 0);
-    if (totalHormiga > 500) {
-      insights.push({
-        id: 'ant-alert',
-        type: 'info',
-        icon: Info,
-        text: `Los gastos pequeños ya suman $${totalHormiga.toLocaleString()}. ¡Cuidado con las fugas!`,
-        color: 'text-secondary-600',
-        bg: 'bg-secondary-50 dark:bg-secondary-800/50'
+      list.push({
+        id: 'top-cat',
+        icon: PieChart,
+        text: `Atención: El ${Math.round(topCatPercent)}% de tus gastos es ${categoryName}.`,
+        color: 'text-indigo-500',
+        bg: 'bg-indigo-500/5 border-indigo-500/20'
       });
     }
 
-    return insights.slice(0, 4); // Mostramos máximo 4 para no saturar
-  }, [currentExpenses, lastExpenses, budget]);
+    return list.slice(0, 2); // Solo mostrar los 2 más importantes
+  }, [currentExpenses, lastExpenses]);
 
-  if (generatedInsights.length === 0) return null;
+  if (insights.length === 0) return null;
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-black uppercase text-secondary-400 tracking-[0.2em] ml-2">Insights del Asistente</p>
+      <p className="text-[10px] font-black uppercase text-secondary-400 dark:text-secondary-500 tracking-[0.2em] ml-2">
+        Análisis IA
+      </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {generatedInsights.map((item) => (
+        {insights.map((item) => (
           <div 
             key={item.id} 
-            className={`flex items-center gap-3 p-4 rounded-[1.8rem] ${item.bg} border border-transparent transition-all hover:scale-[1.02]`}
+            className={`flex items-center gap-4 p-4 rounded-[1.8rem] backdrop-blur-xl border ${item.bg} transition-all hover:scale-[1.01] shadow-sm`}
           >
-            <div className={`p-2 rounded-xl bg-white dark:bg-secondary-900 shadow-sm ${item.color}`}>
+            <div className={`p-2.5 rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-md ${item.color}`}>
               <item.icon size={18} />
             </div>
-            <p className={`text-[11px] font-bold uppercase leading-tight ${item.color}`}>
+            <p className="text-[10px] font-bold text-secondary-700 dark:text-secondary-200 uppercase leading-relaxed pr-2">
               {item.text}
             </p>
           </div>
