@@ -1,0 +1,13 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Fondo Violeta (Squircle) -->
+            <rect x="28" y="28" width="200" height="200" rx="65" fill="#5454FF"/>
+            
+            <!-- Ícono del Rayo -->
+            <!-- Usamos stroke-linejoin="round" para suavizar las esquinas como en la imagen -->
+            <path d="M148 76L100 136H132L116 188L164 124H132L148 76Z" 
+                  fill="#FFD600" 
+                  stroke="#FFD600" 
+                  stroke-width="12" 
+                  stroke-linejoin="round" 
+                  stroke-linecap="round"/>
+        </svg>

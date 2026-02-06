@@ -1,15 +1,20 @@
-export const registerPWA = () => {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('SW registrado', reg))
-        .catch(err => console.error('Error SW', err));
-    });
-  }
-};
+import { registerSW } from 'virtual:pwa-register';
 
-export const requestNotificationPermission = async () => {
-  if (!('Notification' in window)) return false;
-  const permission = await Notification.requestPermission();
-  return permission === 'granted';
-};
+export function registerPWA() {
+  // Intervalo para buscar actualizaciones cada hora (opcional, pero recomendado)
+  const intervalMS = 60 * 60 * 1000;
+
+  const updateSW = registerSW({
+    onNeedRefresh() {
+      // Como pusimos 'autoUpdate' en vite.config, esto pasará mayormente automático,
+      // pero aquí podríamos mostrar un aviso si quisiéramos.
+      console.log("Nueva versión disponible. Actualizando...");
+    },
+    onOfflineReady() {
+      console.log("FinFlow está lista para usarse sin internet.");
+    },
+    onRegisterError(error) {
+      console.error("Error al registrar el Service Worker", error);
+    }
+  });
+}

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 
 const Modal = ({
   isOpen,
@@ -17,7 +18,6 @@ const Modal = ({
     } else {
       document.body.style.overflow = 'unset';
     }
-
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -29,7 +29,6 @@ const Modal = ({
         onClose();
       }
     };
-
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
@@ -45,52 +44,55 @@ const Modal = ({
   };
 
   const modalContent = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 animate-fade-in"
-      onClick={closeOnOverlayClick ? onClose : undefined}
-    >
+    <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Overlay Oscuro con Blur */}
+      <div 
+        className="absolute inset-0 bg-secondary-900/60 backdrop-blur-sm transition-opacity" 
+        onClick={closeOnOverlayClick ? onClose : undefined}
+      />
+      
+      {/* Contenedor Glass */}
       <div
         className={`
-          bg-white dark:bg-secondary-900 rounded-2xl shadow-lg w-full ${sizes[size]}
-          animate-scale-in
+          relative w-full ${sizes[size]}
+          bg-white/95 dark:bg-secondary-900/95
+          backdrop-blur-xl
+          border border-white/20 dark:border-white/5
+          rounded-t-[2.5rem] sm:rounded-[2.5rem]
+          shadow-2xl shadow-black/20
+          transform transition-all duration-300 animate-in slide-in-from-bottom-10 fade-in
+          flex flex-col max-h-[90vh]
         `}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-secondary-200 dark:border-secondary-700">
-          <h2 className="text-2xl font-bold text-secondary-900 dark:text-white">
-            {title}
-          </h2>
-          {showCloseButton && (
-            <button
-              onClick={onClose}
-              className="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-300 transition-colors"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        {(title || showCloseButton) && (
+          <div className="flex items-center justify-between p-6 border-b border-secondary-100 dark:border-white/5 shrink-0">
+            {title ? (
+              <h2 className="text-sm font-black text-secondary-900 dark:text-white uppercase tracking-widest">
+                {title}
+              </h2>
+            ) : <div />}
+            
+            {showCloseButton && (
+              <button
+                onClick={onClose}
+                className="p-2 text-secondary-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-full transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
+                <X size={20} />
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* Content */}
-        <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+        {/* Content con Scroll personalizado */}
+        <div className="p-6 overflow-y-auto custom-scrollbar">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-secondary-200 dark:border-secondary-700">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-secondary-100 dark:border-white/5 bg-secondary-50/50 dark:bg-black/20 shrink-0">
             {footer}
           </div>
         )}

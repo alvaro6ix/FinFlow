@@ -43,13 +43,17 @@ const Sidebar = ({ isOpen, onClose }) => {
       fixed inset-y-0 left-0 z-50 w-72 
       bg-white/70 dark:bg-secondary-950/70 backdrop-blur-xl
       border-r border-white/20 dark:border-white/5
-      transform transition-transform duration-300 lg:translate-x-0 lg:static
+      transform transition-transform duration-300
+      
+      /* ✅ CORRECCIÓN AQUÍ: Sticky en lugar de Static */
+      lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen
+      
       ${isOpen ? 'translate-x-0' : '-translate-x-full'}
     `}>
-      <div className="flex flex-col h-full p-6">
+      <div className="flex flex-col h-full p-6 overflow-y-auto custom-scrollbar"> {/* Agregado overflow-y-auto por seguridad */}
         
         {/* LOGO LIQUID STYLE */}
-        <div className="flex items-center gap-3 mb-10 px-2 group">
+        <div className="flex items-center gap-3 mb-10 px-2 group shrink-0">
           <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 transition-transform group-hover:rotate-12">
             <Zap size={24} className="text-primary-500 fill-primary-500" />
           </div>
@@ -82,7 +86,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </nav>
 
         {/* FOOTER SIDEBAR GLASS */}
-        <div className="pt-6 border-t border-white/10 space-y-3">
+        <div className="pt-6 border-t border-white/10 space-y-3 shrink-0">
           <button
             onClick={() => setIsDark(!isDark)}
             className="w-full flex items-center justify-between p-4 bg-white/40 dark:bg-white/5 rounded-2xl text-secondary-600 dark:text-secondary-400 font-black text-[9px] uppercase tracking-widest hover:scale-[1.02] transition-all"

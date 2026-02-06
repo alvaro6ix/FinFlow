@@ -23,23 +23,25 @@ const Dropdown = ({ trigger, children, align = 'left', className = '' }) => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div onClick={() => setIsOpen(!isOpen)}>
+      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
         {trigger}
       </div>
 
       {isOpen && (
         <div
           className={`
-            absolute z-50 mt-2 min-w-[200px]
-            bg-white dark:bg-secondary-800
-            border border-secondary-200 dark:border-secondary-700
-            rounded-lg shadow-lg
-            animate-slide-down
+            absolute z-50 mt-3 min-w-[220px]
+            bg-white/90 dark:bg-secondary-900/95
+            backdrop-blur-xl
+            border border-white/20 dark:border-white/10
+            rounded-2xl shadow-2xl shadow-indigo-500/10
+            animate-in fade-in slide-in-from-top-2 duration-200
+            p-2
             ${alignmentClasses[align]}
             ${className}
           `}
         >
-          <div className="py-1">
+          <div className="flex flex-col gap-1">
             {children}
           </div>
         </div>
@@ -53,14 +55,15 @@ export const DropdownItem = ({ children, onClick, icon, className = '' }) => {
     <button
       onClick={onClick}
       className={`
-        w-full px-4 py-2 text-left text-sm
-        text-secondary-700 dark:text-secondary-300
-        hover:bg-secondary-100 dark:hover:bg-secondary-700
-        transition-colors flex items-center gap-3
+        w-full px-4 py-3 text-left text-xs font-bold uppercase tracking-wide
+        text-secondary-600 dark:text-secondary-300
+        hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600
+        rounded-xl transition-colors duration-200
+        flex items-center gap-3
         ${className}
       `}
     >
-      {icon && <span className="text-lg">{icon}</span>}
+      {icon && <span className="text-indigo-500">{icon}</span>}
       {children}
     </button>
   );

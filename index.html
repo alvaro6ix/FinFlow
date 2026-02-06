@@ -2,24 +2,26 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='120' fill='%236366f1'/><path d='M160 352V160H352' stroke='white' stroke-width='45' stroke-linecap='round' stroke-linejoin='round'/><path d='M160 256H310' stroke='white' stroke-width='45' stroke-linecap='round' stroke-linejoin='round'/><circle cx='352' cy='160' r='35' fill='%2310b981'/></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     
-    <title>FinFlow - Inteligencia Financiera Pro</title>
-    <meta name="title" content="FinFlow - Tu Asistente Financiero Personal" />
-    <meta name="description" content="Controla tus gastos con análisis psicológico, crea presupuestos y alcanza tus metas financieras. Simple, rápido y efectivo." />
+    <!-- Viewport estricto para sensación nativa -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
-    <meta name="theme-color" content="#6366f1" />
+    <title>FinFlow - Pro</title>
+    <meta name="description" content="Tu asistente financiero personal." />
+    
+    <!-- CORRECCIÓN: Color exacto de tu marca para la barra del navegador -->
+    <meta name="theme-color" content="#5454FF" />
+    
+    <!-- IOS CONFIG -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- Esto hace que la barra superior de iPhone se vea integrada/transparente -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FinFlow">
     
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-    
-    <link rel="manifest" href="/manifest.json" />
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-secondary-50 dark:bg-secondary-950 text-secondary-900 dark:text-white font-sans antialiased">
+  <body style="background-color: #050514; margin: 0;">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

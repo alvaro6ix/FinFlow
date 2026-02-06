@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useUIStore } from '../../stores/uiStore';
-import { SYSTEM_CATEGORIES } from '../../constants/categories';
-import { useExpenseStore } from '../../stores/expenseStore';
-import { useAuthStore } from '../../stores/authStore';
+import { Plus } from 'lucide-react'; 
 
 const FloatingActionButton = () => {
   const { openQuickAddModal } = useUIStore();
@@ -10,10 +8,22 @@ const FloatingActionButton = () => {
   return (
     <button
       onClick={() => openQuickAddModal('expense')}
-      className="fixed bottom-24 lg:bottom-8 right-6 w-16 h-16 bg-primary-500 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:bg-primary-600 transition-transform active:scale-90 z-40 animate-bounce"
+      className={`
+        fixed z-[100] bottom-24 right-4 lg:bottom-10 lg:right-10 
+        w-16 h-16 
+        bg-[#FFD700] hover:bg-amber-500 
+        text-[#1e1b4b] 
+        rounded-full 
+        shadow-[0_10px_40px_-10px_rgba(255,215,0,0.5)]
+        border-4 border-white/20 backdrop-blur-md
+        flex items-center justify-center 
+        transition-all duration-300
+        hover:scale-110 active:scale-95
+        animate-in zoom-in duration-300
+      `}
       aria-label="Agregar gasto rápido"
     >
-      <span>＋</span>
+      <Plus size={32} strokeWidth={3} />
     </button>
   );
 };

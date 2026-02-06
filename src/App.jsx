@@ -8,6 +8,10 @@ import { useAuthStore } from './stores/authStore';
 import Layout from './components/layout/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
+// 1. IMPORTAR TU COMPONENTE DE INSTALACIÓN
+// Asegúrate de que la ruta coincida con donde guardaste el archivo
+import PWAInstallPrompt from './components/common/PWAInstallPrompt';
+
 // Páginas de Autenticación
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -56,26 +60,26 @@ function App() {
   const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
-    // El listener de Firebase debe ser una suscripción limpia
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // Guardamos el usuario en el store global
         setUser(firebaseUser);
       } else {
-        // Limpiamos el usuario si no hay sesión
         setUser(null);
       }
-      
-      // ✅ CORRECCIÓN CLAVE: Detener la carga SIEMPRE después de recibir respuesta de Firebase.
       setLoading(false);
     });
 
-    // Limpieza al desmontar el componente
     return () => unsubscribe();
   }, []); 
 
   return (
     <BrowserRouter>
+      {/* 2. COLOCAR EL COMPONENTE AQUÍ 
+         Lo ponemos antes de las Routes para que "flote" sobre cualquier página
+         en la que esté el usuario.
+      */}
+      <PWAInstallPrompt />
+
       <Routes>
         {/* Rutas Públicas */}
         <Route path="/login" element={
@@ -95,7 +99,7 @@ function App() {
         } />
         <Route path="/reset-password" element={<ResetPassword />} />
         
-        {/* Rutas Privadas (Renderizadas dentro del Layout con Outlet) */}
+        {/* Rutas Privadas */}
         <Route
           path="/"
           element={
@@ -114,7 +118,6 @@ function App() {
           <Route path="settings" element={<Settings />} />
         </Route>
 
-        {/* Catch-all: Redirige cualquier ruta desconocida al Dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>

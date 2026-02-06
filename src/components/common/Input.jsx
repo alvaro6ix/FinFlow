@@ -19,15 +19,15 @@ const Input = ({
   return (
     <div className={`w-full ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">
+        <label className="block text-[10px] font-black uppercase tracking-widest text-secondary-500 dark:text-secondary-400 mb-2 ml-2">
           {label}
-          {required && <span className="text-danger-500 ml-1">*</span>}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       
-      <div className="relative">
+      <div className="relative group">
         {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-secondary-400">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-secondary-400 group-focus-within:text-amber-500 transition-colors">
             {icon}
           </div>
         )}
@@ -40,18 +40,29 @@ const Input = ({
           placeholder={placeholder}
           disabled={disabled}
           className={`
-            w-full rounded-lg border transition-colors duration-200
-            ${icon ? 'pl-10' : 'pl-3'}
-            pr-3 py-2.5
-            text-secondary-900 dark:text-white
-            placeholder-secondary-400
-            focus:outline-none focus:ring-2
-            ${
-              error
-                ? 'border-danger-500 focus:border-danger-500 focus:ring-danger-500'
-                : 'border-secondary-300 dark:border-secondary-600 focus:border-primary-500 focus:ring-primary-500'
-            }
-            ${disabled ? 'bg-secondary-100 dark:bg-secondary-800 cursor-not-allowed' : 'bg-white dark:bg-secondary-900'}
+            w-full 
+            bg-white/50 dark:bg-secondary-900/50 
+            backdrop-blur-sm
+            border border-white/40 dark:border-white/10
+            rounded-2xl
+            py-4
+            text-sm font-bold text-secondary-900 dark:text-white
+            placeholder-secondary-400/70
+            transition-all duration-300
+            shadow-sm
+            
+            ${icon ? 'pl-11' : 'pl-4'}
+            pr-4
+            
+            /* ✅ FOCUS DORADO (GOLD) */
+            focus:outline-none 
+            focus:ring-4 focus:ring-amber-500/10 
+            focus:border-amber-500/50 
+            focus:bg-white/80 dark:focus:bg-secondary-900/80
+            
+            disabled:opacity-50 disabled:cursor-not-allowed
+            
+            ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}
             ${inputClassName}
           `}
           {...props}
@@ -59,14 +70,15 @@ const Input = ({
       </div>
 
       {error && (
-        <p className="mt-1 text-sm text-danger-500 flex items-center gap-1">
-          <span>⚠️</span>
-          {error}
+        <p className="mt-1.5 ml-2 text-[10px] font-bold text-red-500 uppercase tracking-wide flex items-center gap-1">
+          • {error}
         </p>
       )}
-
+      
       {helperText && !error && (
-        <p className="mt-1 text-sm text-secondary-500">{helperText}</p>
+        <p className="mt-1.5 ml-2 text-[10px] text-secondary-400">
+          {helperText}
+        </p>
       )}
     </div>
   );
