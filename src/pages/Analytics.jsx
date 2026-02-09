@@ -1,126 +1,224 @@
-import React, { useMemo } from 'react';
-import { useExpenseStore } from '../stores/expenseStore';
-import { SYSTEM_CATEGORIES, EMOTIONS } from '../constants/categories';
-import Layout from '../components/layout/Layout';
+import React, { useState } from 'react';
+import { useAnalyticsData } from '../hooks/useAnalyticsData';
+import { 
+  Calendar, TrendingUp, TrendingDown, Brain, LineChart, Target, ArrowRight, Clock
+} from 'lucide-react';
+import { TrendChart } from '../components/analytics/charts/TrendChart';
+import { WeekBarChart } from '../components/analytics/charts/WeekBarChart';
+import { HourlyHeatmap } from '../components/analytics/charts/HourlyHeatmap';
 import CategoryChart from '../components/analytics/CategoryChart';
-import TrendChart from '../components/analytics/TrendChart';
-import Card from '../components/common/Card';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { format, startOfWeek, eachDayOfInterval, endOfWeek, isSameDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import PredictionChart from '../components/analytics/PredictionChart';
+import PsychologyAnalysis from '../components/analytics/PsychologyAnalysis';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Analytics = () => {
-  const { expenses } = useExpenseStore();
+  const { period, setPeriod, customRange, setCustomRange, data } = useAnalyticsData();
+  const [activeTab, setActiveTab] = useState('general');
 
-  const analysis = useMemo(() => {
-    // 1. Datos para CategoryChart
-    const catMap = {};
-    expenses.forEach(e => {
-      catMap[e.categoryId] = (catMap[e.categoryId] || 0) + e.amount;
-    });
-    const categoryData = SYSTEM_CATEGORIES.map(c => ({
-      name: c.label,
-      value: catMap[c.id] || 0,
-      color: c.color
-    })).filter(c => c.value > 0);
-
-    const totalSpent = categoryData.reduce((sum, c) => sum + c.value, 0);
-
-    // 2. Datos para TrendChart (Días de la semana)
-    const start = startOfWeek(new Date(), { weekStartsOn: 1 });
-    const end = endOfWeek(new Date(), { weekStartsOn: 1 });
-    const trendData = eachDayOfInterval({ start, end }).map(day => ({
-      label: format(day, 'EEE', { locale: es }).toUpperCase(),
-      amount: expenses
-        .filter(e => isSameDay(new Date(e.date), day))
-        .reduce((sum, e) => sum + e.amount, 0)
-    }));
-
-    // 3. Impacto Emocional (Requerimiento 7.8)
-    const emoData = EMOTIONS.map(emo => ({
-      name: emo.label,
-      amount: expenses
-        .filter(e => e.emotion === emo.id)
-        .reduce((sum, e) => sum + e.amount, 0),
-      color: emo.impact === 'impulse' ? '#ef4444' : '#10b981'
-    })).filter(e => e.amount > 0);
-
-    // 4. Detective Financiero (Requerimiento 13.3)
-    const impulseTotal = expenses.filter(e => e.isImpulse).reduce((sum, e) => sum + e.amount, 0);
-    const plannedTotal = expenses.filter(e => !e.isImpulse).reduce((sum, e) => sum + e.amount, 0);
-    const impulseRatio = (impulseTotal / (totalSpent || 1)) * 100;
-
-    return { categoryData, totalSpent, trendData, emoData, impulseTotal, plannedTotal, impulseRatio };
-  }, [expenses]);
+  if (!data) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-8 pb-32">
-      <header className="px-2">
-        <h1 className="text-3xl font-black text-secondary-900 dark:text-white uppercase tracking-tighter">Análisis <span className="text-primary-600">Pro</span></h1>
-        <p className="text-secondary-500 text-sm font-medium italic">Revelando tus patrones de comportamiento.</p>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CategoryChart data={analysis.categoryData} total={analysis.totalSpent} />
-        <TrendChart data={analysis.trendData} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Análisis Psicológico */}
-        <Card title="Impacto Emocional ($)">
-          <div className="h-64 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analysis.emoData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold'}} />
-                <YAxis hide />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="amount" radius={[10, 10, 0, 0]}>
-                  {analysis.emoData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Impulso vs Planificado */}
-        <Card title="Fuerza de Voluntad">
-          <div className="flex flex-col justify-center h-full space-y-8">
-            <div className="flex justify-between items-end">
-              <div>
-                <p className="text-4xl font-black text-danger-500 tracking-tighter">${analysis.impulseTotal.toFixed(0)}</p>
-                <p className="text-[10px] font-black text-secondary-400 uppercase">Impulso</p>
-              </div>
-              <div className="text-right">
-                <p className="text-4xl font-black text-success-500 tracking-tighter">${analysis.plannedTotal.toFixed(0)}</p>
-                <p className="text-[10px] font-black text-secondary-400 uppercase">Planificado</p>
-              </div>
-            </div>
-            <div className="h-4 w-full bg-secondary-100 dark:bg-secondary-800 rounded-full overflow-hidden flex shadow-inner">
-               <div className="bg-danger-500 h-full transition-all duration-1000" style={{ width: `${analysis.impulseRatio}%` }} />
-            </div>
-            <p className="text-center text-xs font-bold text-secondary-500 italic">
-              El {analysis.impulseRatio.toFixed(1)}% de tus gastos son por impulso.
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      {/* Detective Financiero (Requerimiento 13.3) */}
-      <Card className="bg-gradient-to-br from-secondary-900 to-secondary-800 text-white border-none shadow-2xl">
-        <div className="flex items-start gap-6">
-          <div className="text-5xl">🕵️‍♂️</div>
-          <div>
-            <h3 className="text-xl font-black uppercase tracking-tight mb-2">Detective Financiero</h3>
-            <p className="text-secondary-300 text-sm leading-relaxed">
-              {analysis.impulseRatio > 40 
-                ? "Hemos detectado que tus emociones (especialmente el estrés) están disparando compras no planificadas. Sugerencia: Aplica la regla de las 24 horas en la categoría de Compras."
-                : "¡Excelente control! Tus patrones muestran que la mayoría de tus salidas de dinero están alineadas con tus objetivos a largo plazo."}
-            </p>
+    <div className="space-y-6 pb-24 animate-in fade-in duration-500">
+      
+      {/* HEADER Y TABS */}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="text-2xl font-black text-secondary-900 dark:text-white italic uppercase tracking-tighter">
+            Análisis
+          </h2>
+          {/* Tabs Selector */}
+          <div className="flex bg-secondary-100 dark:bg-secondary-800 p-1 rounded-xl self-start sm:self-auto">
+            {[
+              { id: 'general', icon: LineChart },
+              { id: 'psychology', icon: Brain },
+              { id: 'prediction', icon: Target }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`p-2 sm:px-4 rounded-lg transition-all flex items-center gap-2 ${activeTab === tab.id 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-secondary-400 hover:text-secondary-600'}`}
+              >
+                <tab.icon size={18} />
+                <span className="hidden sm:inline text-xs font-bold uppercase">{tab.id}</span>
+              </button>
+            ))}
           </div>
         </div>
-      </Card>
+
+        {/* Selector de Periodo */}
+        <div className="flex flex-col gap-2">
+          <div className="flex bg-white dark:bg-secondary-900 p-1 rounded-2xl shadow-sm overflow-x-auto no-scrollbar touch-pan-x">
+            {['day', 'week', 'month', 'year', 'custom'].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`flex-1 min-w-[70px] px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap
+                  ${period === p 
+                    ? 'bg-indigo-600 text-white shadow-lg' 
+                    : 'text-secondary-400 hover:bg-secondary-50 dark:hover:bg-secondary-800'}`}
+              >
+                {p === 'day' ? 'Día' : p === 'week' ? 'Semana' : p === 'month' ? 'Mes' : p === 'year' ? 'Año' : 'Rango'}
+              </button>
+            ))}
+          </div>
+          
+          {/* Selector Fechas Personalizado */}
+          {period === 'custom' && (
+            <div className="flex flex-col sm:flex-row gap-2 animate-in slide-in-from-top-2">
+              <input 
+                type="date" 
+                value={customRange.start}
+                onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
+                className="flex-1 bg-white dark:bg-secondary-900 p-3 rounded-xl text-xs font-bold border border-secondary-200 dark:border-secondary-700 outline-none focus:border-indigo-500"
+              />
+              <input 
+                type="date" 
+                value={customRange.end}
+                onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
+                className="flex-1 bg-white dark:bg-secondary-900 p-3 rounded-xl text-xs font-bold border border-secondary-200 dark:border-secondary-700 outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!data.hasData ? (
+        <div className="flex flex-col items-center justify-center h-64 opacity-50 bg-white/50 dark:bg-secondary-900/50 rounded-[2rem] border-2 border-dashed border-secondary-200 dark:border-secondary-800">
+          <Calendar size={48} className="text-secondary-300 mb-2"/>
+          <p className="text-xs font-bold uppercase tracking-widest text-secondary-400">Sin datos en este periodo</p>
+        </div>
+      ) : (
+        <>
+          {/* === VISTA GENERAL === */}
+          {activeTab === 'general' && (
+            <div className="space-y-6">
+              
+              {/* KPIs */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white dark:bg-secondary-900 p-5 rounded-[2rem] shadow-sm border border-secondary-100 dark:border-secondary-800">
+                  <p className="text-[10px] font-black uppercase text-secondary-400 mb-1">Gasto Total</p>
+                  <h3 className="text-3xl font-black text-secondary-900 dark:text-white tracking-tight">
+                    ${data.totalCurrent.toLocaleString()}
+                  </h3>
+                  <div className={`flex items-center gap-1 mt-2 text-[10px] font-bold ${
+                    data.variation > 0 ? 'text-red-500' : 'text-emerald-500'
+                  }`}>
+                    {data.variation > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                    <span>{Math.abs(data.variation).toFixed(1)}% vs anterior</span>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-secondary-900 p-5 rounded-[2rem] shadow-sm border border-secondary-100 dark:border-secondary-800">
+                  <p className="text-[10px] font-black uppercase text-secondary-400 mb-1">Mayor Gasto</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-black text-secondary-900 dark:text-white truncate max-w-[70%]">
+                      {data.categories.top5[0]?.name || '-'}
+                    </h3>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: data.categories.top5[0]?.color || '#eee' }}>
+                      <Target size={14} className="text-white mix-blend-overlay" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-indigo-500 mt-1">
+                    ${data.categories.top5[0]?.amount.toLocaleString() || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tendencias */}
+              <div className="bg-white dark:bg-secondary-900 p-6 rounded-[2.5rem] shadow-sm border border-secondary-100 dark:border-secondary-800 overflow-hidden">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl text-indigo-600">
+                    <TrendingUp size={20} />
+                  </div>
+                  <h3 className="font-black text-secondary-900 dark:text-white text-sm uppercase tracking-widest">
+                    Tendencia
+                  </h3>
+                </div>
+                <div className="-ml-2"> 
+                  <TrendChart data={data.time.trendData} />
+                </div>
+              </div>
+
+              {/* Patrones de Tiempo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-secondary-900 p-6 rounded-[2.5rem] shadow-sm border border-secondary-100 dark:border-secondary-800">
+                  <h3 className="font-black text-secondary-900 dark:text-white text-sm uppercase tracking-widest mb-4">
+                    Días Pico
+                  </h3>
+                  <WeekBarChart data={data.time.weekData} peakDay={data.time.peakDay} />
+                  <div className="mt-4 p-3 bg-secondary-50 dark:bg-secondary-800 rounded-xl text-center">
+                    <p className="text-xs text-secondary-500">
+                      Gastas más los <span className="text-indigo-600 font-black uppercase">{data.time.peakDay}</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white dark:bg-secondary-900 p-6 rounded-[2.5rem] shadow-sm border border-secondary-100 dark:border-secondary-800">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock size={18} className="text-secondary-400" />
+                    <h3 className="font-black text-secondary-900 dark:text-white text-sm uppercase tracking-widest">
+                      Horario de Consumo
+                    </h3>
+                  </div>
+                  <HourlyHeatmap data={data.time.hourData} peakHour={data.time.peakHour} />
+                </div>
+              </div>
+
+              {/* Desglose Detallado */}
+              <div className="bg-white dark:bg-secondary-900 p-6 rounded-[2.5rem] shadow-sm border border-secondary-100 dark:border-secondary-800">
+                <h3 className="font-black text-secondary-900 dark:text-white text-sm uppercase tracking-widest mb-6">
+                  Desglose Detallado
+                </h3>
+                
+                {data.categories.chartData.length > 0 && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="flex items-center justify-center">
+                      <CategoryChart data={data.categories.chartData} />
+                    </div>
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                      {data.categories.chartData.map((cat, idx) => (
+                        <div key={idx} className="group flex items-center justify-between p-3 bg-secondary-50/50 dark:bg-secondary-800/30 hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-2xl transition-all">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: cat.color }} />
+                            <span className="text-xs font-bold text-secondary-700 dark:text-secondary-300 truncate">
+                              {cat.name}
+                            </span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="block text-xs font-black text-secondary-900 dark:text-white">
+                              ${cat.amount.toLocaleString()}
+                            </span>
+                            <span className="text-[9px] font-bold text-secondary-400">
+                              {Math.round(cat.percentage)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* === VISTA PSICOLOGÍA === */}
+          {activeTab === 'psychology' && (
+            <div className="animate-in slide-in-from-right-4 duration-300">
+              <PsychologyAnalysis data={data.psychology} />
+            </div>
+          )}
+
+          {/* === VISTA PREDICCIÓN (IA) === */}
+          {activeTab === 'prediction' && (
+            <div className="animate-in slide-in-from-right-4 duration-300">
+              {/* ✅ CORRECCIÓN AQUÍ: Pasamos el objeto completo 'predictionData' */}
+              <PredictionChart predictionData={data.prediction} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
