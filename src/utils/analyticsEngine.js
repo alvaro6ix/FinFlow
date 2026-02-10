@@ -3,7 +3,11 @@ import { parseDate } from "./dateHelpers";
 
 // --- HELPERS BÁSICOS ---
 export const calculateTotals = (expenses) => {
-  return expenses.reduce((acc, curr) => acc + Number(curr.amount), 0);
+  // ✅ VALIDACIÓN: Filtrar valores inválidos
+  return expenses.reduce((acc, curr) => {
+    const amount = Number(curr.amount);
+    return acc + (isNaN(amount) ? 0 : amount);
+  }, 0);
 };
 
 export const analyzeCategories = (expenses, totalAmount, customCategories = []) => {
@@ -32,9 +36,26 @@ export const analyzeTimePatterns = (expenses, period) => {
   const hourMap = new Array(24).fill(0);
   const trendMap = {};
 
+  // ✅ CORRECCIÓN: Crear un Set de IDs procesados para evitar duplicados
+  const processedIds = new Set();
+
   expenses.forEach(e => {
+    // ✅ VALIDACIÓN: Saltar duplicados
+    if (e.id && processedIds.has(e.id)) {
+      console.warn('⚠️ Gasto duplicado detectado y omitido:', e.id);
+      return;
+    }
+    if (e.id) processedIds.add(e.id);
+
     const date = parseDate(e.date);
     const amount = Number(e.amount);
+    
+    // ✅ VALIDACIÓN: Saltar montos inválidos
+    if (isNaN(amount) || amount <= 0) {
+      console.warn('⚠️ Gasto con monto inválido omitido:', e);
+      return;
+    }
+
     dayAmounts[date.getDay()] += amount;
     hourMap[date.getHours()] += amount;
     
@@ -100,43 +121,70 @@ export const analyzePsychology = (expenses) => {
   };
 };
 
-// ✅ PREDICCIÓN CORREGIDA Y AGRUPADA CORRECTAMENTE
+// ✅ PREDICCIÓN CORREGIDA
 export const predictFuture = (allHistoryExpenses, period = 'month', customCategories = []) => {
-  if (!allHistoryExpenses || allHistoryExpenses.length === 0) return null;
+  if (!allHistoryExpenses || allHistoryExpenses.length === 0) {
+    return {
+      predictedAmount: 0,
+      scenarios: { conservative: 0, normal: 0, pessimistic: 0 },
+      chartData: [],
+      trend: 'stable',
+      confidence: 0,
+      periodName: 'Mes'
+    };
+  }
 
-  // 1. Configurar Agrupación Estricta
+  // 1. Configurar Agrupación según el periodo
   let groupingFn;
   let labelFn;
   let unitName;
+  let pointsToShow;
 
   if (period === 'day') {
-    // Agrupar por DÍA exacto
     unitName = 'Día';
-    groupingFn = (date) => date.toISOString().split('T')[0]; // "2024-02-06"
+    pointsToShow = 7;
+    groupingFn = (date) => date.toISOString().split('T')[0];
     labelFn = (date) => `${date.getDate()}/${date.getMonth() + 1}`;
   } 
   else if (period === 'week') {
-    // Agrupar por SEMANA (Lunes)
     unitName = 'Semana';
+    pointsToShow = 6;
     groupingFn = (date) => {
       const d = new Date(date);
-      const day = d.getDay() || 7; // Ajustar domingo
+      const day = d.getDay() || 7;
       if (day !== 1) d.setHours(-24 * (day - 1)); 
       return d.toISOString().split('T')[0];
     };
     labelFn = (date) => `Sem ${date.getDate()}/${date.getMonth() + 1}`;
-  } 
-  else {
-    // Agrupar por MES (Default)
+  }
+  else if (period === 'year') {
+    unitName = 'Año';
+    pointsToShow = 12;
+    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+    labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short' });
+  }
+  else if (period === 'month') {
     unitName = 'Mes';
-    groupingFn = (date) => `${date.getFullYear()}-${date.getMonth()}`;
+    pointsToShow = 6;
+    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+    labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+  }
+  else {
+    unitName = 'Periodo';
+    pointsToShow = 6;
+    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
     labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
   }
 
-  // 2. Procesar Datos
+  // 2. Procesar Datos (✅ SIN duplicados)
   const timelineData = {};
+  const processedIds = new Set();
   
   allHistoryExpenses.forEach(e => {
+    // ✅ VALIDACIÓN: Saltar duplicados
+    if (e.id && processedIds.has(e.id)) return;
+    if (e.id) processedIds.add(e.id);
+
     const date = parseDate(e.date);
     const key = groupingFn(date);
     
@@ -150,13 +198,16 @@ export const predictFuture = (allHistoryExpenses, period = 'month', customCatego
   const historyValues = Object.values(timelineData).sort((a, b) => a.date - b.date);
   const amounts = historyValues.map(v => v.amount);
 
-  if (amounts.length < 1) return { 
-    predictedAmount: 0, 
-    scenarios: { conservative: 0, normal: 0, pessimistic: 0 }, 
-    chartData: [], 
-    trend: 'stable',
-    periodName: unitName 
-  };
+  if (amounts.length < 1) {
+    return { 
+      predictedAmount: 0, 
+      scenarios: { conservative: 0, normal: 0, pessimistic: 0 }, 
+      chartData: [], 
+      trend: 'stable',
+      confidence: 0,
+      periodName: unitName 
+    };
+  }
 
   // 3. Cálculos de Predicción
   const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
@@ -164,14 +215,12 @@ export const predictFuture = (allHistoryExpenses, period = 'month', customCatego
   const maxVal = Math.max(...amounts);
   const minVal = Math.min(...amounts);
 
-  // Escenarios ajustados a la unidad de tiempo
   const normal = Math.round((lastVal * 0.6) + (avg * 0.4));
   const conservative = Math.round((minVal + normal) / 2);
   const pessimistic = Math.round((maxVal + lastVal) / 2);
 
   // 4. Datos para el Gráfico
-  // Mostramos hasta 6 puntos históricos para que se vea bien en Día/Semana
-  const chartData = historyValues.slice(-6).map(v => ({
+  const chartData = historyValues.slice(-pointsToShow).map(v => ({
     name: labelFn(v.date),
     real: v.amount,
     predicted: null

@@ -35,15 +35,30 @@ export const useAnalyticsData = () => {
       };
     }
 
+    // ✅ CORRECCIÓN 1: Eliminar duplicados por ID
+    const uniqueExpenses = expenses.reduce((acc, current) => {
+      const existing = acc.find(item => item.id === current.id);
+      if (!existing) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
+    // ✅ CORRECCIÓN 2: Validar que los gastos tengan amount válido
+    const validExpenses = uniqueExpenses.filter(e => {
+      const amount = Number(e.amount);
+      return !isNaN(amount) && amount > 0;
+    });
+
     const { start, end } = getDateRange(period, customRange.start, customRange.end);
     const { start: prevStart, end: prevEnd } = getPreviousPeriod(start, end);
 
-    const currentExpenses = expenses.filter(e => {
+    const currentExpenses = validExpenses.filter(e => {
       const d = parseDate(e.date);
       return d >= start && d <= end;
     });
     
-    const prevExpenses = expenses.filter(e => {
+    const prevExpenses = validExpenses.filter(e => {
       const d = parseDate(e.date);
       return d >= prevStart && d <= prevEnd;
     });
@@ -56,8 +71,8 @@ export const useAnalyticsData = () => {
     const time = Engine.analyzeTimePatterns(currentExpenses, period);
     const psychology = Engine.analyzePsychology(currentExpenses);
     
-    // ✅ CORRECCIÓN: Pasamos 'period' y 'customCategories' para predicción dinámica
-    const prediction = Engine.predictFuture(expenses, period, customCategories);
+    // ✅ CORRECCIÓN 3: Usar validExpenses en vez de expenses
+    const prediction = Engine.predictFuture(validExpenses, period, customCategories);
 
     return {
       currentExpenses,
