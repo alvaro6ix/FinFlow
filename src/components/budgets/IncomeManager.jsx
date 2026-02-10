@@ -1,294 +1,208 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useBudgetStore } from '../../stores/budgetStore';
 import { useAuthStore } from '../../stores/authStore';
 import { 
-  Plus, Trash2, BrainCircuit, Sparkles, Briefcase, TrendingUp, 
-  Edit2, DollarSign, X 
+  Plus, Trash2, BrainCircuit, Sparkles, Briefcase, TrendingUp, X, Edit2, 
+  History, BarChart2, Calendar, ArrowRight 
 } from 'lucide-react';
 
 const IncomeManager = () => {
   const { user } = useAuthStore();
-  const { 
-    incomeSources, 
-    addIncome, 
-    updateIncome, 
-    deleteIncome, 
-    calculateTotalIncome 
-  } = useBudgetStore();
+  const { incomeSources, addIncome, updateIncome, deleteIncome } = useBudgetStore();
   
-  const [showForm, setShowForm] = useState(false);
-  const [editingIncome, setEditingIncome] = useState(null);
+  const [viewMode, setViewMode] = useState('add');
+  const [editingId, setEditingId] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [monthA, setMonthA] = useState('');
+  const [monthB, setMonthB] = useState('');
   
   const [formData, setFormData] = useState({
-    name: '',
-    amount: '',
-    type: 'fixed',
-    frequency: 'monthly'
+    name: '', amount: '', type: 'fixed', frequency: 'monthly', date: new Date().toISOString().split('T')[0]
   });
 
-  const totalIncome = calculateTotalIncome();
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      amount: '',
-      type: 'fixed',
-      frequency: 'monthly'
+  const historyData = useMemo(() => {
+    const filtered = incomeSources.filter(inc => {
+      if (!inc.date) return false;
+      const d = new Date(inc.date.seconds ? inc.date.seconds * 1000 : inc.date);
+      return d.toISOString().slice(0, 7) === selectedMonth;
     });
-    setEditingIncome(null);
-    setShowForm(false);
-  };
+    const fixedTotal = filtered.filter(i => i.type === 'fixed').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const variableTotal = filtered.filter(i => i.type === 'variable').reduce((acc, curr) => acc + Number(curr.amount), 0);
+    return { items: filtered, fixedTotal, variableTotal, total: fixedTotal + variableTotal };
+  }, [incomeSources, selectedMonth]);
 
-  const handleEdit = (income) => {
-    setFormData({
-      name: income.name,
-      amount: income.amount.toString(),
-      type: income.type,
-      frequency: income.frequency || 'monthly'
-    });
-    setEditingIncome(income);
-    setShowForm(true);
-  };
+  const compareData = useMemo(() => {
+    if (!monthA || !monthB) return null;
+    const getMonthTotal = (m) => incomeSources
+      .filter(inc => {
+        if (!inc.date) return false;
+        const d = new Date(inc.date.seconds ? inc.date.seconds * 1000 : inc.date);
+        return d.toISOString().slice(0, 7) === m;
+      })
+      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalA = getMonthTotal(monthA);
+    const totalB = getMonthTotal(monthB);
+    const diff = totalB - totalA;
+    const percent = totalA > 0 ? ((diff / totalA) * 100) : 0;
+    return { totalA, totalB, diff, percent };
+  }, [incomeSources, monthA, monthB]);
 
-  const handleSubmit = async (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.amount) return;
-    
-    const incomeData = {
-      userId: user.uid,
-      name: formData.name,
-      amount: parseFloat(formData.amount),
-      type: formData.type,
-      frequency: formData.frequency
-    };
-
-    if (editingIncome) {
-      await updateIncome(editingIncome.id, incomeData);
-    } else {
-      await addIncome(incomeData);
-    }
-    
-    resetForm();
+    const payload = { ...formData, amount: parseFloat(formData.amount) };
+    if (editingId) await updateIncome(editingId, payload);
+    else await addIncome({ userId: user.uid, ...payload });
+    setFormData({ name: '', amount: '', type: 'fixed', frequency: 'monthly', date: new Date().toISOString().split('T')[0] });
+    setEditingId(null);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Eliminar este ingreso?')) {
-      await deleteIncome(id);
-    }
+  const handleEdit = (inc) => {
+    const d = new Date(inc.date.seconds ? inc.date.seconds * 1000 : inc.date);
+    setFormData({
+      name: inc.name,
+      amount: inc.amount,
+      type: inc.type,
+      frequency: inc.frequency || 'monthly',
+      date: d.toISOString().split('T')[0]
+    });
+    setEditingId(inc.id);
+    setViewMode('add');
   };
 
-  const getFrequencyLabel = (frequency) => {
-    const labels = {
-      weekly: 'Semanal',
-      biweekly: 'Quincenal',
-      monthly: 'Mensual',
-      yearly: 'Anual'
-    };
-    return labels[frequency] || 'Mensual';
-  };
+  const containerClass = "relative overflow-hidden bg-white/40 dark:bg-secondary-900/40 backdrop-blur-xl border border-white/20 rounded-[2.5rem] shadow-xl group mb-8 transition-all hover:shadow-2xl";
+  // ✅ Input corregido: text-color explícito y color-scheme dark
+  const inputClass = "w-full bg-white/50 dark:bg-black/20 border border-secondary-200 dark:border-white/10 rounded-xl p-3 text-secondary-900 dark:text-white placeholder-secondary-400 text-xs font-bold outline-none focus:ring-2 focus:ring-[#FFD700] transition-all dark:[color-scheme:dark]";
+  const selectClass = "w-full bg-white/50 dark:bg-black/20 border border-secondary-200 dark:border-white/10 rounded-xl p-3 text-secondary-900 dark:text-white text-xs font-bold outline-none appearance-none cursor-pointer";
+  const activeTabClass = "bg-[#FFD700] text-[#1e1b4b] shadow-lg shadow-[#FFD700]/20 font-black";
+  const inactiveTabClass = "bg-white/50 dark:bg-white/5 text-secondary-500 dark:text-secondary-400 hover:bg-white/80 dark:hover:bg-white/10";
 
   return (
-    <div className="relative overflow-hidden rounded-[2.5rem] shadow-xl group mb-8 transition-all">
-      {/* Fondo amarillo */}
-      <div className="absolute inset-0 bg-[#FFD700] opacity-95 backdrop-blur-xl" />
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent" />
+    <div className={containerClass}>
       
-      <div className="relative z-10 p-8">
-        <BrainCircuit 
-          className="absolute -right-6 -top-6 text-[#1e1b4b] opacity-10 rotate-12" 
-          size={180} 
-        />
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-[#1e1b4b]/10 backdrop-blur-sm">
-              <Sparkles size={16} className="text-[#1e1b4b]" />
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1e1b4b]/70">
-              Gestor de Ingresos
-            </span>
+      <div className="relative z-10 p-6 sm:p-8">
+        
+        {/* HEADER & TABS (Responsive: flex-wrap) */}
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-4 mb-6">
+          <div className="flex items-center gap-2 self-start lg:self-center">
+            <div className="p-2.5 rounded-xl bg-[#FFD700] shadow-sm"><Sparkles size={18} className="text-[#1e1b4b]" /></div>
+            <span className="text-lg font-black uppercase tracking-widest text-secondary-900 dark:text-white">Ingresos</span>
           </div>
-          <button 
-            onClick={() => {
-              if (showForm) {
-                resetForm();
-              } else {
-                setShowForm(true);
-              }
-            }}
-            className="bg-[#1e1b4b] text-[#FFD700] p-2 rounded-lg hover:scale-110 transition-transform shadow-lg z-20"
-          >
-            {showForm ? <X size={18} /> : <Plus size={18} />}
-          </button>
-        </div>
-
-        {/* Total Display */}
-        <div className="mb-6">
-          <p className="text-xs font-bold text-[#1e1b4b]/60 uppercase tracking-widest mb-1">
-            Ingreso Mensual Total
-          </p>
-          <h3 className="text-4xl sm:text-5xl font-black text-[#1e1b4b] tracking-tighter">
-            ${totalIncome.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </h3>
-        </div>
-
-        {/* Formulario */}
-        {showForm && (
-          <form 
-            onSubmit={handleSubmit} 
-            className="bg-[#1e1b4b]/10 backdrop-blur-md p-4 rounded-2xl mb-4 border border-[#1e1b4b]/10 animate-in slide-in-from-top-2"
-          >
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="relative">
-                  <DollarSign 
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1e1b4b]/50" 
-                    size={16} 
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Nombre (ej: Sueldo, Venta)" 
-                    className="w-full pl-10 bg-white/50 border-none rounded-xl p-3 text-[#1e1b4b] placeholder-[#1e1b4b]/50 text-xs font-bold focus:bg-white outline-none focus:ring-2 focus:ring-[#1e1b4b]/20"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    autoFocus
-                    required
-                  />
-                </div>
-                <input 
-                  type="number" 
-                  step="0.01"
-                  placeholder="Monto" 
-                  className="bg-white/50 border-none rounded-xl p-3 text-[#1e1b4b] placeholder-[#1e1b4b]/50 text-xs font-bold focus:bg-white outline-none focus:ring-2 focus:ring-[#1e1b4b]/20"
-                  value={formData.amount}
-                  onChange={e => setFormData({ ...formData, amount: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[8px] font-black uppercase text-[#1e1b4b]/60 ml-1 mb-1 block">
-                    Tipo
-                  </label>
-                  <select 
-                    className="w-full bg-white/50 border-none rounded-xl p-3 text-[#1e1b4b] text-xs font-bold focus:bg-white outline-none appearance-none focus:ring-2 focus:ring-[#1e1b4b]/20"
-                    value={formData.type}
-                    onChange={e => setFormData({ ...formData, type: e.target.value })}
-                  >
-                    <option value="fixed">Fijo (Sueldo)</option>
-                    <option value="variable">Variable (Extra)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[8px] font-black uppercase text-[#1e1b4b]/60 ml-1 mb-1 block">
-                    Frecuencia
-                  </label>
-                  <select 
-                    className="w-full bg-white/50 border-none rounded-xl p-3 text-[#1e1b4b] text-xs font-bold focus:bg-white outline-none appearance-none focus:ring-2 focus:ring-[#1e1b4b]/20"
-                    value={formData.frequency}
-                    onChange={e => setFormData({ ...formData, frequency: e.target.value })}
-                  >
-                    <option value="weekly">Semanal</option>
-                    <option value="biweekly">Quincenal</option>
-                    <option value="monthly">Mensual</option>
-                    <option value="yearly">Anual</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              className="w-full bg-[#1e1b4b] text-white hover:bg-black py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg mt-3 transition-colors"
-            >
-              {editingIncome ? 'Actualizar Ingreso' : 'Guardar Ingreso'}
+          
+          {/* Pestañas: scroll horizontal en móvil si es muy pequeño, o wrap */}
+          <div className="flex flex-wrap justify-center gap-1 p-1 bg-white/50 dark:bg-black/20 rounded-xl backdrop-blur-md border border-white/10 w-full lg:w-auto">
+            <button onClick={() => setViewMode('add')} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'add' ? activeTabClass : inactiveTabClass}`}>
+              <Plus size={14} /> <span className="hidden sm:inline">Registrar</span>
             </button>
-          </form>
+            <button onClick={() => setViewMode('history')} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'history' ? activeTabClass : inactiveTabClass}`}>
+              <History size={14} /> Historial
+            </button>
+            <button onClick={() => setViewMode('compare')} className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${viewMode === 'compare' ? activeTabClass : inactiveTabClass}`}>
+              <BarChart2 size={14} /> Comparar
+            </button>
+          </div>
+        </div>
+
+        {/* --- VISTA 1: REGISTRO --- */}
+        {viewMode === 'add' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+              <input type="text" placeholder="Concepto" className={inputClass} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <input type="number" placeholder="Monto" className={inputClass} value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
+              <input type="date" className={inputClass} value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              <select className={selectClass} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                <option value="fixed" className="text-black">Fijo (Sueldo)</option>
+                <option value="variable" className="text-black">Variable (Extra)</option>
+              </select>
+              {formData.type === 'fixed' && (
+                <select className={selectClass} value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value})}>
+                  <option value="monthly" className="text-black">Mensual</option>
+                  <option value="biweekly" className="text-black">Quincenal</option>
+                  <option value="weekly" className="text-black">Semanal</option>
+                </select>
+              )}
+            </form>
+            <button onClick={handleSave} className="w-full py-4 bg-[#FFD700] hover:bg-[#e6c200] text-[#1e1b4b] rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-lg transition-all hover:scale-[1.01] active:scale-95">
+              {editingId ? 'Actualizar Ingreso' : 'Guardar Ingreso'}
+            </button>
+          </div>
         )}
 
-        {/* Lista */}
-        <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-          {incomeSources.length === 0 && !showForm && (
-            <div className="text-center py-8 opacity-60">
-              <p className="text-xs font-bold text-[#1e1b4b]">
-                No hay ingresos registrados
-              </p>
-              <p className="text-[10px] text-[#1e1b4b]/70 mt-1">
-                Agrega tu primer ingreso para comenzar
-              </p>
+        {/* --- VISTA 2: HISTORIAL (Responsive) --- */}
+        {viewMode === 'history' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+            <div className="flex items-center gap-3 bg-white/50 dark:bg-white/5 p-2 rounded-xl w-full sm:w-fit border border-secondary-100 dark:border-white/10">
+              <Calendar size={16} className="text-[#FFD700]" />
+              <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent text-secondary-900 dark:text-white font-bold outline-none text-sm w-full dark:[color-scheme:dark]" />
             </div>
-          )}
 
-          {incomeSources.map((inc) => (
-            <div 
-              key={inc.id} 
-              className="flex items-center justify-between p-3 bg-white/40 rounded-xl border border-white/20 group hover:bg-white/60 transition-colors"
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <div className={`p-1.5 rounded-lg ${
-                  inc.type === 'fixed' 
-                    ? 'bg-emerald-500/20 text-emerald-700' 
-                    : 'bg-orange-500/20 text-orange-700'
-                }`}>
-                  {inc.type === 'fixed' ? <Briefcase size={14} /> : <TrendingUp size={14} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-[#1e1b4b] truncate">
-                    {inc.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[8px] font-bold opacity-60 uppercase tracking-wider">
-                      {inc.type === 'fixed' ? 'Fijo' : 'Variable'}
-                    </span>
-                    <span className="text-[8px] font-bold opacity-40">•</span>
-                    <span className="text-[8px] font-bold opacity-60 uppercase tracking-wider">
-                      {getFrequencyLabel(inc.frequency)}
-                    </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase">Fijo</p>
+                <p className="text-lg font-black text-secondary-900 dark:text-white">${historyData.fixedTotal.toLocaleString()}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/20">
+                <p className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase">Variable</p>
+                <p className="text-lg font-black text-secondary-900 dark:text-white">${historyData.variableTotal.toLocaleString()}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-[#FFD700]/10 border border-[#FFD700]/20">
+                <p className="text-[10px] text-[#b45309] dark:text-[#FFD700] font-bold uppercase">Total</p>
+                <p className="text-lg font-black text-secondary-900 dark:text-white">${historyData.total.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+              {historyData.items.map(inc => (
+                <div key={inc.id} className="flex justify-between items-center p-3 bg-white/50 dark:bg-white/5 rounded-xl border border-secondary-100 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${inc.type === 'fixed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'}`}>
+                      {inc.type === 'fixed' ? <Briefcase size={14} /> : <TrendingUp size={14} />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-secondary-900 dark:text-white">{inc.name}</p>
+                      <p className="text-[9px] text-secondary-500 dark:text-secondary-400 uppercase tracking-wide">
+                        {new Date(inc.date.seconds ? inc.date.seconds * 1000 : inc.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-bold text-secondary-900 dark:text-[#FFD700]">${Number(inc.amount).toLocaleString()}</span>
+                    <div className="flex gap-1">
+                      <button onClick={() => handleEdit(inc)} className="p-1.5 text-secondary-400 hover:text-indigo-500 rounded-lg hover:bg-white/20"><Edit2 size={14} /></button>
+                      <button onClick={() => deleteIncome(inc.id)} className="p-1.5 text-secondary-400 hover:text-red-500 rounded-lg hover:bg-white/20"><Trash2 size={14} /></button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-black text-[#1e1b4b] text-sm whitespace-nowrap">
-                  ${Number(inc.amount).toLocaleString('es-MX', { minimumFractionDigits: 0 })}
-                </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleEdit(inc)}
-                    className="p-1.5 text-blue-600/70 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Editar"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(inc.id)}
-                    className="p-1.5 text-red-600/70 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Eliminar"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Info */}
-        {incomeSources.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-[#1e1b4b]/10">
-            <div className="flex items-center justify-between text-[10px] font-bold text-[#1e1b4b]/60">
-              <span className="uppercase tracking-wider">
-                Total de {incomeSources.length} fuente{incomeSources.length !== 1 ? 's' : ''}
-              </span>
-              <span className="uppercase tracking-wider">
-                {incomeSources.filter(i => i.type === 'fixed').length} fijo{incomeSources.filter(i => i.type === 'fixed').length !== 1 ? 's' : ''} • {incomeSources.filter(i => i.type === 'variable').length} variable{incomeSources.filter(i => i.type === 'variable').length !== 1 ? 's' : ''}
-              </span>
+              ))}
             </div>
           </div>
         )}
+
+        {/* --- VISTA 3: COMPARAR (Responsive Inputs) --- */}
+        {viewMode === 'compare' && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+              <input type="month" value={monthA} onChange={e => setMonthA(e.target.value)} className={`${inputClass} dark:[color-scheme:dark]`} />
+              <ArrowRight className="text-secondary-400 dark:text-[#FFD700] rotate-90 sm:rotate-0" />
+              <input type="month" value={monthB} onChange={e => setMonthB(e.target.value)} className={`${inputClass} dark:[color-scheme:dark]`} />
+            </div>
+
+            {compareData && (
+              <div className="bg-white/50 dark:bg-white/5 rounded-[2rem] p-6 border border-secondary-100 dark:border-white/10 text-center">
+                <p className="text-xs font-bold text-secondary-500 dark:text-gray-400 uppercase mb-4">Diferencia</p>
+                <div className="flex justify-center items-end gap-2 mb-2">
+                  <span className={`text-4xl font-black ${compareData.diff >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {compareData.diff >= 0 ? '+' : ''}${compareData.diff.toLocaleString()}
+                  </span>
+                  <span className={`text-sm font-bold mb-2 ${compareData.diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    ({compareData.percent.toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

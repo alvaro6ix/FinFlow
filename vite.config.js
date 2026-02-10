@@ -53,7 +53,36 @@ export default defineConfig({
             icons: [{ src: "pwa-192x192.png", sizes: "192x192" }]
           }
         ]
+      },
+      // ✅ SOLUCIÓN AL ERROR DE PWA: Aumentamos el límite de caché a 4MB
+      workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     })
-  ]
+  ],
+  // ✅ SOLUCIÓN A LOS CHUNKS GRANDES: Optimizamos la construcción
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Separamos Firebase porque es muy pesado
+            if (id.includes('firebase')) {
+              return 'firebase';
+            }
+            // Separamos las gráficas
+            if (id.includes('recharts')) {
+              return 'charts';
+            }
+            // Separamos librerías visuales y de React
+            if (id.includes('react') || id.includes('lucide')) {
+              return 'vendor';
+            }
+          }
+        }
+      }
+    }
+  }
 })

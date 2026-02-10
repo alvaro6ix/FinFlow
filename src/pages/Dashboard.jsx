@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import React, { useMemo, useEffect } from "react";
 import { useExpenseStore } from "../stores/expenseStore";
 import { useBudgetStore } from "../stores/budgetStore";
 import { useAuthStore } from "../stores/authStore";
@@ -20,21 +20,25 @@ import QuickAddModal from "../components/expenses/QuickAddModal";
 
 const Dashboard = () => {
   const { expenses, subscribeExpenses } = useExpenseStore();
-  const { budgets, subscribeBudgets } = useBudgetStore();
+  // ✅ Añadido incomeSources y subscribeIncome para HealthScore
+  const { budgets, subscribeBudgets, subscribeIncome } = useBudgetStore();
   const { user } = useAuthStore();
   const { subscribeCategories } = useCategoryStore();
   
-  // ✅ CORRECCIÓN: Usamos el nombre exacto de tu uiStore.js
   const { openQuickAddModal } = useUIStore(); 
 
   useEffect(() => {
     if (user?.uid) {
       const unsubExp = subscribeExpenses(user.uid);
       const unsubBud = subscribeBudgets(user.uid);
+      // ✅ Suscripción vital para HealthScore
+      const unsubInc = subscribeIncome(user.uid);
       const unsubCat = subscribeCategories(user.uid);
+      
       return () => {
         if (unsubExp) unsubExp();
         if (unsubBud) unsubBud();
+        if (unsubInc) unsubInc(); // Cleanup
         if (unsubCat) unsubCat();
       };
     }
@@ -64,7 +68,9 @@ const Dashboard = () => {
     
     const recurringExpenses = allExpenses.filter(e => e.isRecurring === true);
     const totalRecurring = recurringExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-    const totalBudget = budgets.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+    
+    // Total de límites configurados (opcional, pero útil para MonthSummary)
+    const totalBudget = budgets.reduce((sum, b) => sum + (b.isActive ? Number(b.amount || 0) : 0), 0);
 
     return {
       totalToday, todayExpenses,
@@ -77,7 +83,7 @@ const Dashboard = () => {
   }, [expenses, budgets]);
 
   return (
-    <div className="space-y-6 pb-32 px-2 sm:px-0 max-w-5xl mx-auto overflow-x-hidden relative">
+    <div className="space-y-6 pb-32 px-2 sm:px-0 max-w-5xl mx-auto overflow-x-hidden relative animate-in fade-in duration-500">
       <header className="pt-6 px-1">
         <h1 className="text-4xl font-black text-secondary-900 dark:text-white uppercase tracking-tighter leading-none">
           Hola, <span className="text-indigo-600 dark:text-indigo-400">{user?.displayName?.split(" ")[0]}</span>
@@ -91,7 +97,8 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         <div className="md:col-span-4 h-full">
-          <HealthScore spent={dashboardData.totalMonth} budget={dashboardData.totalBudget} />
+          {/* ✅ HealthScore ahora es inteligente y calcula sus propios datos */}
+          <HealthScore />
         </div>
         <div className="md:col-span-8 h-full">
           <MonthSummary spent={dashboardData.totalMonth} budget={dashboardData.totalBudget} lastMonthSpent={dashboardData.lastMonthSpent} />
