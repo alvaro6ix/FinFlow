@@ -1,9 +1,16 @@
 import { SYSTEM_CATEGORIES } from "../constants/categories";
 import { parseDate } from "./dateHelpers";
 
+// ✅ FIX ZONA HORARIA (USA FECHA LOCAL, NO UTC)
+const getLocalDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // --- HELPERS BÁSICOS ---
 export const calculateTotals = (expenses) => {
-  // ✅ VALIDACIÓN: Filtrar valores inválidos
   return expenses.reduce((acc, curr) => {
     const amount = Number(curr.amount);
     return acc + (isNaN(amount) ? 0 : amount);
@@ -35,31 +42,19 @@ export const analyzeTimePatterns = (expenses, period) => {
   const dayAmounts = new Array(7).fill(0);
   const hourMap = new Array(24).fill(0);
   const trendMap = {};
-
-  // ✅ CORRECCIÓN: Crear un Set de IDs procesados para evitar duplicados
   const processedIds = new Set();
 
   expenses.forEach(e => {
-    // ✅ VALIDACIÓN: Saltar duplicados
-    if (e.id && processedIds.has(e.id)) {
-      console.warn('⚠️ Gasto duplicado detectado y omitido:', e.id);
-      return;
-    }
+    if (e.id && processedIds.has(e.id)) return;
     if (e.id) processedIds.add(e.id);
 
     const date = parseDate(e.date);
     const amount = Number(e.amount);
-    
-    // ✅ VALIDACIÓN: Saltar montos inválidos
-    if (isNaN(amount) || amount <= 0) {
-      console.warn('⚠️ Gasto con monto inválido omitido:', e);
-      return;
-    }
+    if (isNaN(amount) || amount <= 0) return;
 
     dayAmounts[date.getDay()] += amount;
     hourMap[date.getHours()] += amount;
-    
-    // Tendencia simple para el gráfico pequeño
+
     let key;
     if (period === 'year') {
       key = date.toLocaleDateString('es-MX', { month: 'short' });
@@ -121,80 +116,67 @@ export const analyzePsychology = (expenses) => {
   };
 };
 
-// ✅ PREDICCIÓN CORREGIDA
-export const predictFuture = (allHistoryExpenses, period = 'month', customCategories = []) => {
-  if (!allHistoryExpenses || allHistoryExpenses.length === 0) {
-    return {
-      predictedAmount: 0,
-      scenarios: { conservative: 0, normal: 0, pessimistic: 0 },
-      chartData: [],
-      trend: 'stable',
-      confidence: 0,
-      periodName: 'Mes'
-    };
-  }
+// ✅ PREDICCIÓN COMPLETA (SOLO FIX FECHAS)
+export const predictFuture = (currentPeriodExpenses, period = 'month', customCategories = []) => {
 
-  // 1. Configurar Agrupación según el periodo
   let groupingFn;
   let labelFn;
   let unitName;
-  let pointsToShow;
+  let nextLabel;
 
   if (period === 'day') {
     unitName = 'Día';
-    pointsToShow = 7;
-    groupingFn = (date) => date.toISOString().split('T')[0];
-    labelFn = (date) => `${date.getDate()}/${date.getMonth() + 1}`;
+    nextLabel = 'Próxima Hora';
+    groupingFn = (date) => `${getLocalDateKey(date)}-H${date.getHours()}`;
+    labelFn = (date) => `${date.getHours()}:00`;
   } 
   else if (period === 'week') {
     unitName = 'Semana';
-    pointsToShow = 6;
-    groupingFn = (date) => {
-      const d = new Date(date);
-      const day = d.getDay() || 7;
-      if (day !== 1) d.setHours(-24 * (day - 1)); 
-      return d.toISOString().split('T')[0];
-    };
-    labelFn = (date) => `Sem ${date.getDate()}/${date.getMonth() + 1}`;
-  }
-  else if (period === 'year') {
-    unitName = 'Año';
-    pointsToShow = 12;
-    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
-    labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short' });
+    nextLabel = 'Próximo';
+    const daysNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    groupingFn = (date) => getLocalDateKey(date);
+    labelFn = (date) => daysNames[date.getDay()];
   }
   else if (period === 'month') {
     unitName = 'Mes';
-    pointsToShow = 6;
-    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
-    labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+    nextLabel = 'Próximo';
+    groupingFn = (date) => {
+      const weekNumber = Math.ceil(date.getDate() / 7);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-W${weekNumber}`;
+    };
+    labelFn = (date) => `Sem ${Math.ceil(date.getDate() / 7)}`;
+  }
+  else if (period === 'year') {
+    unitName = 'Año';
+    nextLabel = 'Próximo';
+    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    labelFn = (date) => ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][date.getMonth()];
   }
   else {
     unitName = 'Periodo';
-    pointsToShow = 6;
-    groupingFn = (date) => `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
-    labelFn = (date) => date.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+    nextLabel = 'Próximo';
+    groupingFn = (date) => getLocalDateKey(date);
+    labelFn = (date) => `${date.getDate()}/${date.getMonth() + 1}`;
   }
 
-  // 2. Procesar Datos (✅ SIN duplicados)
   const timelineData = {};
   const processedIds = new Set();
-  
-  allHistoryExpenses.forEach(e => {
-    // ✅ VALIDACIÓN: Saltar duplicados
-    if (e.id && processedIds.has(e.id)) return;
-    if (e.id) processedIds.add(e.id);
 
+  currentPeriodExpenses.forEach((e, index) => {
     const date = parseDate(e.date);
     const key = groupingFn(date);
-    
+
+    const uniqueKey = e.id || `temp-${index}-${e.date}-${e.amount}`;
+    if (processedIds.has(uniqueKey)) return;
+    processedIds.add(uniqueKey);
+
     if (!timelineData[key]) {
       timelineData[key] = { amount: 0, date: date, key: key };
     }
+
     timelineData[key].amount += Number(e.amount);
   });
 
-  // Ordenar cronológicamente
   const historyValues = Object.values(timelineData).sort((a, b) => a.date - b.date);
   const amounts = historyValues.map(v => v.amount);
 
@@ -209,9 +191,8 @@ export const predictFuture = (allHistoryExpenses, period = 'month', customCatego
     };
   }
 
-  // 3. Cálculos de Predicción
   const avg = amounts.reduce((a, b) => a + b, 0) / amounts.length;
-  const lastVal = amounts[amounts.length - 1];
+  const lastVal = amounts[amounts.length - 1] || avg;
   const maxVal = Math.max(...amounts);
   const minVal = Math.min(...amounts);
 
@@ -219,16 +200,14 @@ export const predictFuture = (allHistoryExpenses, period = 'month', customCatego
   const conservative = Math.round((minVal + normal) / 2);
   const pessimistic = Math.round((maxVal + lastVal) / 2);
 
-  // 4. Datos para el Gráfico
-  const chartData = historyValues.slice(-pointsToShow).map(v => ({
+  const chartData = historyValues.map(v => ({
     name: labelFn(v.date),
     real: v.amount,
     predicted: null
   }));
 
-  // Punto de proyección
   chartData.push({
-    name: 'Próximo',
+    name: nextLabel,
     real: null,
     predicted: normal,
     range: [conservative, pessimistic]

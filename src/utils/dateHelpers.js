@@ -54,20 +54,14 @@ export const getDateRange = (rangeType, customStart = null, customEnd = null) =>
       
     case 'custom':
       if (customStart) {
-        // ✅ CORRECCIÓN: Parsear correctamente sin offset
-        const parts = customStart.split('-');
-        const year = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1; // Meses en JS son 0-11
-        const day = parseInt(parts[2]);
-        start = new Date(year, month, day, 0, 0, 0, 0);
+        // ✅ CORRECCIÓN MEJORADA: Parsear fecha sin problemas de zona horaria
+        const [year, month, day] = customStart.split('-').map(Number);
+        start = new Date(year, month - 1, day, 0, 0, 0, 0);
       }
       if (customEnd) {
-        // ✅ CORRECCIÓN: Parsear correctamente sin offset
-        const parts = customEnd.split('-');
-        const year = parseInt(parts[0]);
-        const month = parseInt(parts[1]) - 1;
-        const day = parseInt(parts[2]);
-        end = new Date(year, month, day, 23, 59, 59, 999);
+        // ✅ CORRECCIÓN MEJORADA: Parsear fecha sin problemas de zona horaria
+        const [year, month, day] = customEnd.split('-').map(Number);
+        end = new Date(year, month - 1, day, 23, 59, 59, 999);
       }
       break;
       

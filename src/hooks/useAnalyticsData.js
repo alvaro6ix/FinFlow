@@ -71,8 +71,8 @@ export const useAnalyticsData = () => {
     const time = Engine.analyzeTimePatterns(currentExpenses, period);
     const psychology = Engine.analyzePsychology(currentExpenses);
     
-    // ✅ CORRECCIÓN 3: Usar validExpenses en vez de expenses
-    const prediction = Engine.predictFuture(validExpenses, period, customCategories);
+    // ✅ CORRECCIÓN CRÍTICA: Pasar currentExpenses para respetar el filtro de periodo
+    const prediction = Engine.predictFuture(currentExpenses, period, customCategories);
 
     return {
       currentExpenses,
