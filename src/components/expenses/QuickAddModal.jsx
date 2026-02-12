@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Button from "../common/Button";
 
-// ✅ MAPA MAESTRO
+// ✅ MAPA MAESTRO DE ICONOS
 const ICON_MAP = {
   Utensils, Pizza, Coffee, Beer, Car, Truck, Home, TreePine, Film, Gamepad2, 
   Music, Pill, Heart, Dumbbell, Book, GraduationCap, Shirt, ShoppingBag, ShoppingCart, 
@@ -34,11 +34,25 @@ const PAYMENT_METHODS = [
 
 const RECURRENCE_TYPES = ["diaria", "semanal", "quincenal", "mensual", "anual"];
 
-const toLocalDateTimeString = (date) => {
-  if (!date) return "";
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+// ✅ HELPER: Formato seguro para input datetime-local (Inmune a RangeError)
+const toLocalDateTimeString = (dateInput) => {
+  if (!dateInput) return "";
+  try {
+    const d = dateInput.toDate ? dateInput.toDate() : new Date(dateInput);
+    if (isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (e) { return ""; }
+};
+
+// ✅ HELPER: Formato seguro para input date (YYYY-MM-DD)
+const toYMDString = (dateInput) => {
+  if (!dateInput) return "";
+  try {
+    const d = dateInput.toDate ? dateInput.toDate() : new Date(dateInput);
+    if (isNaN(d.getTime())) return "";
+    return d.toISOString().split('T')[0];
+  } catch (e) { return ""; }
 };
 
 const QuickAddModal = () => {
@@ -77,15 +91,19 @@ const QuickAddModal = () => {
           tags: editingExpense.tags ? (Array.isArray(editingExpense.tags) ? editingExpense.tags.join(", ") : editingExpense.tags) : "",
           isRecurring: editingExpense.isRecurring || false,
           recurrence: editingExpense.recurrence || 'mensual',
-          startDate: editingExpense.startDate ? new Date(editingExpense.startDate).toISOString().split('T')[0] : '',
-          endDate: editingExpense.endDate ? new Date(editingExpense.endDate).toISOString().split('T')[0] : ''
+          // ✅ USO DE HELPERS SEGUROS PARA EVITAR CRASH
+          startDate: toYMDString(editingExpense.startDate),
+          endDate: toYMDString(editingExpense.endDate)
         });
       } else {
+        const now = new Date();
         setForm({
           amount: "", categoryId: "", subcategoryId: "", description: "",
-          paymentMethod: "efectivo", date: toLocalDateTimeString(new Date()),
+          paymentMethod: "efectivo", date: toLocalDateTimeString(now),
           location: null, imageUrl: null, isRecurring: false,
-          recurrence: "mensual", startDate: new Date().toISOString().split('T')[0], endDate: "",
+          recurrence: "diaria", 
+          startDate: toYMDString(now), 
+          endDate: "",
           emotion: "neutral", purchaseType: "need", tags: ""
         });
       }
@@ -124,11 +142,12 @@ const QuickAddModal = () => {
       amount: Number(form.amount),
       categoryName: category?.label || "General",
       subcategoryName: subcategory?.label || "",
-      tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: typeof form.tags === 'string' ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : form.tags,
       userId: user.uid,
       date: new Date(form.date),
-      startDate: form.isRecurring ? (form.startDate ? new Date(form.startDate) : new Date(form.date)) : null,
-      endDate: form.isRecurring && form.endDate ? new Date(form.endDate) : null
+      // ✅ NORMALIZACIÓN DE HORAS PARA EVITAR DESFASES
+      startDate: form.isRecurring ? (form.startDate ? new Date(`${form.startDate}T12:00:00`) : new Date(form.date)) : null,
+      endDate: (form.isRecurring && form.endDate) ? new Date(`${form.endDate}T23:59:59`) : null
     };
 
     const result = editingExpense ? await updateExpense(editingExpense.id, expenseData) : await addExpense(expenseData);
@@ -231,17 +250,17 @@ const QuickAddModal = () => {
                     <div className="mt-4 space-y-3 animate-in fade-in">
                       <div className="grid grid-cols-3 gap-2">
                         {RECURRENCE_TYPES.map(type => (
-                          <button key={type} onClick={() => setForm({...form, recurrence: type})} className={`py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${form.recurrence === type ? 'bg-[#FFD700]/20 text-[#b45309] border-[#FFD700]' : 'bg-white border-transparent'}`}>{type}</button>
+                          <button key={type} onClick={() => setForm({...form, recurrence: type})} className={`py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${form.recurrence === type ? 'bg-[#FFD700]/20 text-[#b45309] border-[#FFD700]' : 'bg-white border-transparent text-secondary-400'}`}>{type}</button>
                         ))}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="text-[8px] font-black uppercase text-[#FFD700] ml-1">Inicio</label>
-                          <input type="date" value={form.startDate} onChange={(e) => setForm({...form, startDate: e.target.value})} className="w-full p-2 rounded-xl text-xs font-bold bg-white border-none" />
+                          <input type="date" value={form.startDate} onChange={(e) => setForm({...form, startDate: e.target.value})} className="w-full p-2 rounded-xl text-xs font-bold bg-white dark:bg-secondary-700 border-none" />
                         </div>
                         <div>
                           <label className="text-[8px] font-black uppercase text-secondary-400 ml-1">Fin (Opcional)</label>
-                          <input type="date" value={form.endDate} onChange={(e) => setForm({...form, endDate: e.target.value})} className="w-full p-2 rounded-xl text-xs font-bold bg-white border-none" />
+                          <input type="date" value={form.endDate} onChange={(e) => setForm({...form, endDate: e.target.value})} className="w-full p-2 rounded-xl text-xs font-bold bg-white dark:bg-secondary-700 border-none" />
                         </div>
                       </div>
                     </div>
@@ -249,13 +268,13 @@ const QuickAddModal = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={handleGetLocation} disabled={isLocating} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.location ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-secondary-50 text-secondary-500'}`}><MapPin size={16} /> {isLocating ? 'Ubicando...' : form.location ? 'Ubicado' : 'GPS'}</button>
-                  <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.imageUrl ? 'bg-purple-50 text-purple-600 border border-purple-200' : 'bg-secondary-50 text-secondary-500'}`}><CameraIcon size={16} /> {isUploading ? 'Subiendo...' : form.imageUrl ? 'Listo' : 'Ticket'}</button>
+                  <button onClick={handleGetLocation} disabled={isLocating} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.location ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-secondary-50 dark:bg-secondary-800 text-secondary-500'}`}><MapPin size={16} /> {isLocating ? 'Ubicando...' : form.location ? 'Ubicado' : 'GPS'}</button>
+                  <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-black text-[10px] uppercase transition-all ${form.imageUrl ? 'bg-purple-50 text-purple-600 border border-purple-200' : 'bg-secondary-50 dark:bg-secondary-800 text-secondary-500'}`}><CameraIcon size={16} /> {isUploading ? 'Subiendo...' : form.imageUrl ? 'Listo' : 'Ticket'}</button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                 </div>
                 <div className="flex items-center gap-3 p-4 bg-secondary-50 dark:bg-secondary-800 rounded-2xl">
                   <Tag className="text-[#FFD700]" size={20} />
-                  <input type="text" placeholder="Tags (separados por coma)" className="bg-transparent font-bold w-full outline-none text-xs" value={form.tags} onChange={(e) => setForm({...form, tags: e.target.value})} />
+                  <input type="text" placeholder="Tags (separados por coma)" className="bg-transparent font-bold w-full outline-none text-xs text-secondary-900 dark:text-white" value={form.tags} onChange={(e) => setForm({...form, tags: e.target.value})} />
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
@@ -289,7 +308,7 @@ const QuickAddModal = () => {
                   })}
                 </div>
               </div>
-              <textarea placeholder="Descripción opcional o notas..." className="w-full p-4 rounded-2xl bg-secondary-100 dark:bg-secondary-800 font-bold text-xs h-24 border-none focus:ring-2 focus:ring-[#FFD700] shadow-inner" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <textarea placeholder="Descripción opcional o notas..." className="w-full p-4 rounded-2xl bg-secondary-100 dark:bg-secondary-800 font-bold text-xs h-24 border-none focus:ring-2 focus:ring-[#FFD700] shadow-inner text-secondary-900 dark:text-white" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               <div className="flex gap-3">
                  <Button variant="secondary" className="flex-1 py-5 font-black" onClick={() => setStep(2)}>ATRÁS</Button>
                  <Button variant="primary" className="flex-[2] py-5 shadow-2xl" onClick={handleSave} loading={isSaving || isUploading}><Check className="mr-2" /> {editingExpense ? 'ACTUALIZAR GASTO' : 'CONFIRMAR GASTO'}</Button>

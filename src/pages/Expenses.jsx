@@ -8,13 +8,16 @@ import ExpenseFilters from "../components/expenses/ExpenseFilters";
 import CategoryManager from "../components/expenses/CategoryManager"; // Importar el manager
 import FloatingActionButton from "../components/common/FloatingActionButton";
 import QuickAddModal from "../components/expenses/QuickAddModal";
-import { Search, SlidersHorizontal, X, Calendar as CalendarIcon, Trash2, Loader2, Tag } from "lucide-react";
+import { Search, SlidersHorizontal, X, Calendar as CalendarIcon, Trash2, Loader2, Tag, Repeat } from "lucide-react";
+// ✅ IMPORTAR HOOK DE NAVEGACIÓN
+import { useNavigate } from 'react-router-dom';
 
 const Expenses = () => {
   const { expenses, subscribeExpenses, deleteExpense, clearAllExpenses, loading } = useExpenseStore();
   const { user } = useAuthStore();
   const { openQuickAddModal } = useUIStore();
-  const { subscribeCategories } = useCategoryStore(); // Store de categorías
+  const { subscribeCategories } = useCategoryStore(); 
+  const navigate = useNavigate(); // Hook
   
   const [showFilters, setShowFilters] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -29,12 +32,11 @@ const Expenses = () => {
     sortBy: "date-desc"
   });
 
-  // Suscripción de Datos (Gastos y Categorías)
+  // Suscripción de Datos
   useEffect(() => {
     if (user?.uid) {
       const unsubExpenses = subscribeExpenses(user.uid);
       const unsubCategories = subscribeCategories(user.uid);
-      
       return () => {
         if (unsubExpenses) unsubExpenses();
         if (unsubCategories) unsubCategories();
@@ -42,17 +44,14 @@ const Expenses = () => {
     }
   }, [user?.uid, subscribeExpenses, subscribeCategories]);
 
-  // Lógica de borrado masivo corregida
   const handleDeleteAll = async () => {
     if (!expenses || expenses.length === 0) {
       alert("No hay gastos para eliminar");
       return;
     }
-
     const confirmDelete = window.confirm(
       `¿Estás seguro de que deseas eliminar TODOS los gastos? (${expenses.length} registros)\n\n⚠️ Esta acción NO se puede deshacer.`
     );
-
     if (!confirmDelete) return;
 
     setIsDeleting(true);
@@ -138,6 +137,16 @@ const Expenses = () => {
           Movimientos
         </h1>
         <div className="flex items-center gap-2">
+          
+          {/* ✅ BOTÓN DE RECURRENTES (NUEVO) */}
+          <button 
+            onClick={() => navigate('/recurring')}
+            className="p-2.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 rounded-xl hover:scale-105 transition-transform"
+            title="Ver Recurrentes"
+          >
+            <Repeat size={18} />
+          </button>
+
           {/* GESTIÓN DE CATEGORÍAS */}
           <button 
             onClick={() => setShowCategoryManager(true)}

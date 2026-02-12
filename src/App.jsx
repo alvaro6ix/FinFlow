@@ -8,9 +8,9 @@ import { useAuthStore } from './stores/authStore';
 import Layout from './components/layout/Layout';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
-// 1. IMPORTAR TU COMPONENTE DE INSTALACIÓN
-// Asegúrate de que la ruta coincida con donde guardaste el archivo
+// 1. IMPORTAR COMPONENTES GLOBALES
 import PWAInstallPrompt from './components/common/PWAInstallPrompt';
+import RecurringProcessor from './components/common/RecurringProcessor'; // ✅ NUEVO
 
 // Páginas de Autenticación
 import Login from './pages/auth/Login';
@@ -21,6 +21,7 @@ import ResetPassword from './pages/auth/ResetPassword';
 // Páginas de la Aplicación
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
+import RecurringExpenses from './pages/RecurringExpenses'; // ✅ ASEGÚRATE DE TENER ESTE ARCHIVO
 import Budgets from './pages/Budgets';
 import Goals from './pages/Goals';
 import Analytics from './pages/Analytics';
@@ -43,41 +44,42 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return (
+    <>
+      {/* ✅ INYECTAMOS EL MOTOR AQUÍ DE FORMA SEGURA */}
+      <RecurringProcessor />
+      {children}
+    </>
+  );
 };
 
-// Componente para evitar que usuarios logueados vuelvan al login
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuthStore();
 
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
-  
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 };
 
 function App() {
+  // Inicialización de Auth (Manteniendo tu lógica original si la tenías)
   const { setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
     });
-
     return () => unsubscribe();
-  }, []); 
+  }, [setUser, setLoading]);
 
   return (
     <BrowserRouter>
-      {/* 2. COLOCAR EL COMPONENTE AQUÍ 
-         Lo ponemos antes de las Routes para que "flote" sobre cualquier página
-         en la que esté el usuario.
-      */}
+      {/* Prompt de instalación PWA */}
       <PWAInstallPrompt />
 
       <Routes>
@@ -111,6 +113,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="expenses" element={<Expenses />} />
+          <Route path="recurring" element={<RecurringExpenses />} /> {/* ✅ RUTA NUEVA */}
           <Route path="budgets" element={<Budgets />} />
           <Route path="goals" element={<Goals />} />
           <Route path="analytics" element={<Analytics />} />
