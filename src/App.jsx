@@ -23,6 +23,7 @@ import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
 import RecurringExpenses from './pages/RecurringExpenses'; // ✅ ASEGÚRATE DE TENER ESTE ARCHIVO
 import Budgets from './pages/Budgets';
+import Credits from './pages/Credits'; // 1. IMPORTAR
 import Goals from './pages/Goals';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
@@ -115,6 +116,7 @@ function App() {
           <Route path="expenses" element={<Expenses />} />
           <Route path="recurring" element={<RecurringExpenses />} /> {/* ✅ RUTA NUEVA */}
           <Route path="budgets" element={<Budgets />} />
+          <Route path="credits" element={<Credits />} /> {/* 2. AGREGAR ESTA LÍNEA */}
           <Route path="goals" element={<Goals />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="profile" element={<Profile />} />
